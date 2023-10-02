@@ -97,6 +97,6 @@ d_prominent_random_slim <- d_prominent_random %>%
   mutate(DOI = paste0('https://doi.org/',DOI)) # convert dois to links
 
 # save the data files with all of the WOS bibliographic information
-write_csv(d_field_wide_random, here('data','prepare-sample','03 - final','field-wide-list.csv'))
-write_csv(d_prominent_random, here('data','prepare-sample','03 - final','prominent-list.csv'))
+write_csv(d_field_wide_random_slim, here('data','prepare-sample','03 - final','field-wide-list.csv'))
+write_csv(d_prominent_random_slim, here('data','prepare-sample','03 - final','prominent-list.csv'))
 
