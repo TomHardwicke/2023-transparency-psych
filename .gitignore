@@ -51,3 +51,5 @@ analysis/preliminaryAnalysis.html
 *.log
 data/prepare-sample/01 - from WOS/wos_search_02-10-2023.csv
 data/prepare-sample/01 - from WOS/journals_byJIF_empirical.csv
+data/prepare-sample/02 - modified/field-wide-list.csv
+data/prepare-sample/02 - modified/prominent-list.csv
