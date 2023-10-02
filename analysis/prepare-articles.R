@@ -83,10 +83,8 @@ write_csv(d_field_wide_random, here('data','prepare-sample','02 - modified','fie
 write_csv(d_prominent_random, here('data','prepare-sample','02 - modified','prominent-list.csv'))
 
 # now create slimmed down versions of these files ready for the coders
-d_field_wide_random %>%
-  select()
 
-# Define a vector of the columns you want to select and rename
+# Define a vector of the columns to select and rename
 columns_to_select_rename <- c("DOI", "journal_name", "title" = "Title", "article_id", "wos_id" = "Accession Number (UT)") # column name mappings
 
 # Select and rename columns
