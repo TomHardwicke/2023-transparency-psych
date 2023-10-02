@@ -23,7 +23,7 @@ dissemination/
 
 # RStudio files
 .Rproj.user/
-.Rproj
+*.Rproj
 .Rprofile
 
 # produced vignettes
