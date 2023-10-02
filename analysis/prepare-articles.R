@@ -10,9 +10,11 @@ d_journals <- read_csv(here('data','prepare-sample','01 - from WOS','journals_by
 # load the articles returned by the Web of Science search.
 d_articles <- read_csv(here('data','prepare-sample','01 - from WOS','wos_search_02-10-2023.csv'), col_types = cols(.default = "c"))
 
-# give every article a unique ID
+# give every article a unique ID and create coder columns
 d_articles <- d_articles %>%
-  mutate(article_id = seq(1,nrow(d_articles))) %>%
+  mutate(article_id = seq(1,nrow(d_articles)),
+         primary_coder = NA,
+         secondary_coder = NA) %>%
   select(article_id, everything())
 
 # standardize journal name format
@@ -85,7 +87,7 @@ write_csv(d_prominent_random, here('data','prepare-sample','02 - modified','prom
 # now create slimmed down versions of these files ready for the coders
 
 # Define a vector of the columns to select and rename
-columns_to_select_rename <- c("DOI", "journal_name", "title" = "Title", "article_id", "wos_id" = "Accession Number (UT)") # column name mappings
+columns_to_select_rename <- c("article_id", "primary_coder", "secondary_coder", "DOI", "journal_name", "title" = "Title", "wos_id" = "Accession Number (UT)") # column name mappings
 
 # Select and rename columns
 d_field_wide_random_slim <- d_field_wide_random %>%
