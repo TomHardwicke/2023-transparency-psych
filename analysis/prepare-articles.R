@@ -78,10 +78,27 @@ d_prominent_random <- slice_sample(d_prominent, n = 400) # randomly select 400 r
 list_duplicates <- semi_join(d_field_wide_random, d_prominent_random) # return rows appearing in both lists
 nrow(list_duplicates)
 
-# save the data files
-write_csv(d_field_wide_random, here('data','prepare-sample','02 - final','field-wide-list.csv'))
-write_csv(d_prominent_random, here('data','prepare-sample','02 - final','prominent-list.csv'))
+# save the data files with all of the WOS bibliographic information
+write_csv(d_field_wide_random, here('data','prepare-sample','02 - modified','field-wide-list.csv'))
+write_csv(d_prominent_random, here('data','prepare-sample','02 - modified','prominent-list.csv'))
 
+# now create slimmed down versions of these files ready for the coders
+d_field_wide_random %>%
+  select()
 
+# Define a vector of the columns you want to select and rename
+columns_to_select_rename <- c("DOI", "journal_name", "title" = "Title", "article_id", "wos_id" = "Accession Number (UT)") # column name mappings
 
+# Select and rename columns
+d_field_wide_random_slim <- d_field_wide_random %>%
+  select(!!!columns_to_select_rename) %>%
+  mutate(DOI = paste0('https://doi.org/',DOI)) # convert dois to links
+
+d_prominent_random_slim <- d_prominent_random %>%
+  select(!!!columns_to_select_rename) %>%
+  mutate(DOI = paste0('https://doi.org/',DOI)) # convert dois to links
+
+# save the data files with all of the WOS bibliographic information
+write_csv(d_field_wide_random, here('data','prepare-sample','03 - final','field-wide-list.csv'))
+write_csv(d_prominent_random, here('data','prepare-sample','03 - final','prominent-list.csv'))
 
