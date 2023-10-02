@@ -49,3 +49,5 @@ analysis/preliminaryAnalysis.html
 # temporary manuscript files
 *.tex
 *.log
+data/prepare-sample/01 - from WOS/wos_search_02-10-2023.csv
+data/prepare-sample/01 - from WOS/journals_byJIF_empirical.csv
