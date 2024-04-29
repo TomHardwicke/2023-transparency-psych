@@ -1,0 +1,605 @@
+---
+title: "Analysis"
+format: html
+---
+
+# Load packages
+
+```{r}
+library(tidyverse)
+library(here)
+library(tidylog)
+```
+
+# Define summary function
+
+```{r}
+count_prop_ci <- function(data, ...) {
+  columns <- enquos(...)
+  
+  data %>%
+    count(sample_id, !!!columns, .drop = FALSE) %>%
+    group_by(sample_id) %>%
+    mutate(N = sum(n),
+           percent = round(n/N * 100, 0)) %>%
+    rowwise() %>%
+    mutate(
+      ci_lwr = round(prop.test(n, N)$conf.int * 100, 0)[1],
+      ci_upr = round(prop.test(n, N)$conf.int * 100, 0)[2],
+      values = paste0(n, '/', N, ' (', percent, '% [', ci_lwr, '%-', ci_upr, '%])')
+    )
+}
+```
+
+# Load plot theme
+```{r}
+theme_custom <- function () { 
+  theme_grey(base_size = 20, base_family = "sans") %+replace% 
+    theme(
+      # plot margin
+      plot.margin = unit(rep(0.5, 4), "cm"),
+      # plot background and border
+      plot.background = element_blank(),
+      panel.background = element_blank(),
+      panel.border = element_blank(),
+      # grid lines
+      panel.grid.major.x = element_blank(),
+      panel.grid.major.y = element_line(linewidth = 0.5, linetype = 'dotted', color = "#cbcbcb"), 
+      panel.grid.minor = element_blank(),
+      # axis ticks and lines
+      axis.ticks = element_blank(),
+      axis.line = element_blank(),
+      # title, subtitle and caption
+      #plot.title = element_text(size = 20, face = "bold", colour = "#757575", hjust = 0),
+      # legend
+      legend.position = "bottom",
+      legend.margin = margin(0),
+      legend.background = element_blank(),
+      legend.key = element_blank(),
+      legend.title = element_text(size = 12, colour = "#333333"),
+      legend.text.align = 0,
+      legend.text = element_text(size = 20, colour = "#333333"),
+      # faceting
+      strip.background = element_rect(fill = "transparent", colour = NA),
+      strip.text = element_text(size = 20, face = "bold", colour = "#333333", hjust = 0, margin = margin(b = 10, t = 10))
+    )
+}
+```
+
+# Load custom functions
+
+```{r}
+# define a "not in" operator
+`%notin%` <- Negate(`%in%`)
+
+# function to calculate 95% Wilson CIs on single proportions (using prop.test) then output them in a string with a point estimate as percentages
+percentCI <- function(successes, total) {
+  percent <- round((successes/total)*100,1)
+  CI <- round(prop.test(successes,total)$conf.int*100, 1)
+  CIstring <- paste0(percent,'%, CI [', CI[1], ',', CI[2], ']')
+  return(CIstring)
+}
+```
+
+# Load data
+
+```{r}
+# load the extraction/classification data (output of the google form)
+d <- read_csv(here('data','raw','Extraction form (Responses) - Form Responses 1.csv'))
+
+# load article lists up until where data collection stopped
+d_field_list <- read_csv(here('data','raw','field-wide-list - field-wide-list.csv')) %>% slice(1:226)
+d_prominent_list <- read_csv(here('data','raw','prominent-list - prominent-list.csv')) %>% slice(1:234)
+```
+
+# Rename columns
+
+```{r}
+d <- d %>%
+  rename(
+    timestamp = Timestamp,
+    coder_id = `Coder initials`,
+    article_id = `Article ID`,
+    open_access_status = `Can you view an open access version of this article?`,
+    article_version_coded = `Which version of the article are you coding?`,
+    eligible_empirical = `Does the article report on empirical data?`,
+    research_design = `What is the research design? (tick all that apply)`,
+    prereg_statement = `Does the article state whether or not the study (or some aspect of the study) was preregistered?`,
+    prereg_statement_verbatim = `Copy and paste the verbatim statement`,
+    prereg_identify_method = `How did you identify the statement?...10`,
+    prereg_access_method = `How is the preregistration accessed? (according to the statement)`,
+    prereg_access_status = `Can you access and view the preregistration (without contacting anyone)?`,
+    data_statement = `Does the article state whether or not data are available?`,
+    data_statement_verbatim = `Copy and paste the verbatim statement....14`,
+    data_identify_method = `How did you identify the statement?...15`,
+    data_access_method = `How are the data accessed? (according to the statement)`,
+    data_access_status = `Can you access, download, and view the data (without contacting anyone)?`,
+    materials_statement = `Does the article state whether or not materials are available?`,
+    materials_statement_verbatim = `Copy and paste the verbatim statement....19`,
+    materials_identify_method = `How did you identify the statement?...20`,
+    materials_access_method = `How are the materials accessed? (according to the statement)`,
+    materials_access_status = `Can you access, download, and view the materials (without contacting anyone)?`,
+    analysis_statement = `Does the article state whether or not analysis scripts are available?`,
+    analysis_statement_verbatim = `Copy and paste the verbatim statement....24`,
+    analysis_identify_method = `How did you identify the statement?...25`,
+    analysis_access_method = `How is the analysis script accessed? (according to the statement)`,
+    analysis_access_status = `Can you access, download, and view the analysis script (without contacting anyone)?`,
+    funding_statement = `Does the article include a statement indicating whether there were funding sources?`,
+    funding_statement_verbatim = `Copy and paste the verbatim statement....29`,
+    funding_identify_method = `How did you identify the statement?...30`,
+    coi_statement = `Does the article include a statement indicating whether there were any conflicts of interest?`,
+    coi_statement_verbatim = `Copy and paste the verbatim statement....32`,
+    coi_identify_method = `How did you identify the statement?...33`,
+    notes = `You can use this space to record anything interesting or problematic about this article`)
+```
+
+# fix an encoding issue
+```{r}
+# there seems to be some encoding problem created by the use of em dashes so let's remove them
+
+# Function to remove em dash
+remove_em_dash <- function(x) {
+  gsub("— ", "", x)
+}
+
+# Remove em dash from all columns
+d <- mutate_all(d, ~remove_em_dash(.))
+```
+
+# Remove mistakenly coded articles
+
+```{r}
+# a few articles were mistakenly coded twice by a single coder. The extra article codings have the word 'exclude' in the coder id. Here we remove them.
+d <- d %>% 
+  filter(!str_detect(coder_id, "exclude"))
+```
+
+# Identify any articles in both samples
+
+```{r}
+# its plausible that articles appeared in both samples, which would mean they have four coders. We need to retain only the coding of two coders for each article.
+
+# first identify any articles that are in both samples
+articles_in_both_samples <- d_field_list %>% mutate(both_samples = article_id %in% d_prominent_list$article_id) %>% filter(both_samples == T) %>% pull(article_id)
+
+# it looks like there is one such article
+# remove two of the coders for this article
+d <- d %>% filter(!(article_id == "75660" & coder_id %in% c("SC", "NM")))
+```
+
+# Identify article sample
+
+```{r}
+# the extraction/classification data in dataframe d is for both samples but does not identify to which sample each article belongs. To get this we need to compare the article ids to the lists of articles in each sample.
+
+# identify article sample
+d <- d %>% mutate(sample_id = case_when(
+  article_id %in% d_field_list$article_id ~ 'Field',
+  article_id %in% d_prominent_list$article_id ~ 'Prominent',
+  TRUE ~ 'Neither'
+  ))
+
+# some articles were accidentally coded — coding was supposed to proceed row by row, but one coder started working further down the article list. These articles need to be excluded. Note above that when the article lists were loaded in above, we only loaded the rows up until data collection was stopped, so this does not include the articles that were incorrectly coded. Thus to remove the accidental coding from dataframe d, we just need to identify the articles that do not belong to either the field or prominent sample and remove them:
+d <- d %>%
+  filter(sample_id != 'Neither')
+```
+
+# Assign primary / secondary coder status
+
+```{r}
+# each article was coded by two independent coders, which we refer to as primary and secondary. There's no difference between the primary/secondary designation, but it will help us differentiate the two codings for each article as we mung the data.
+d <- d %>%
+  group_by(article_id) %>% # for each article
+  mutate(coder_type = if_else(row_number() %% 2 == 1, "primary", "secondary")) %>% # first row = primary, second row = secondary 
+  select(coder_type, everything()) %>%
+  ungroup()
+```
+
+# Rearrange column order
+
+```{r}
+d <- d %>% 
+  select(timestamp, article_id, sample_id, coder_type, coder_id, everything())
+```
+
+# Identify coding differences
+
+```{r}
+# we need to identify any differences between the primary and secondary coder so a third coder can reconcile them.
+
+# get column names for which we want to compare primary and secondary coding
+column_names <- d %>%
+  select(-(timestamp:coder_id), -contains(c('verbatim', 'identify_method')), -article_version_coded, -notes) %>% 
+  colnames()
+
+# pivot dataframe so that there's one row per article and two columns (primary and secondary) for each variable (other than metadata)
+d_wide <- d %>%
+  select(-timestamp) %>%
+  pivot_wider(
+    id_cols = c(article_id, sample_id),
+    names_from = coder_type,
+    values_from = !c(article_id, sample_id, coder_type),
+    names_sep = "_"
+  ) 
+
+# now we add a 'match' column for each variable which says whether the primary and secondary coding matched or not.
+# we also add an 'agreed' column: if the coders agreed this contains the agreed coding. If they disagreed, this contains a ? until the third coder resolves the difference
+for (i in seq_along(column_names)) {
+  this_colname <- column_names[i]
+  d_wide <- d_wide %>%
+    mutate(!!paste0(this_colname, "_match") := if_else(!!sym(paste0(this_colname, "_primary")) == !!sym(paste0(this_colname, "_secondary")), T, F)) %>%
+    mutate(!!paste0(this_colname, "_agreed") := if_else(!!sym(paste0(this_colname, "_match")) == T, !!sym(paste0(this_colname, "_primary")), '?'))
+}
+
+d_wide <- d_wide %>% 
+  select("article_id", "sample_id", 
+  "coder_id_primary", "coder_id_secondary", 
+  "article_version_coded_primary", "article_version_coded_secondary", 
+  "open_access_status_primary", "open_access_status_secondary", "open_access_status_match", "open_access_status_agreed", 
+  "eligible_empirical_primary", "eligible_empirical_secondary", "eligible_empirical_match", "eligible_empirical_agreed", 
+  "research_design_primary", "research_design_secondary", "research_design_match", "research_design_agreed", 
+  "prereg_statement_primary", "prereg_statement_secondary", "prereg_statement_verbatim_primary", "prereg_statement_verbatim_secondary", "prereg_statement_match", "prereg_statement_agreed", "prereg_access_method_primary", "prereg_access_method_secondary", "prereg_access_method_match", "prereg_access_method_agreed", "prereg_access_status_primary", "prereg_access_status_secondary", "prereg_access_status_match", "prereg_access_status_agreed", "prereg_identify_method_primary", "prereg_identify_method_secondary", 
+  "data_statement_primary", "data_statement_secondary", "data_statement_verbatim_primary", "data_statement_verbatim_secondary", "data_statement_match", "data_statement_agreed", "data_access_method_primary", "data_access_method_secondary", "data_access_method_match", "data_access_method_agreed", "data_access_status_primary", "data_access_status_secondary", "data_access_status_match", "data_access_status_agreed", "data_identify_method_primary", "data_identify_method_secondary", 
+  "materials_statement_primary", "materials_statement_secondary", "materials_statement_verbatim_primary", "materials_statement_verbatim_secondary", "materials_statement_match", "materials_statement_agreed", "materials_access_method_primary", "materials_access_method_secondary", "materials_access_method_match", "materials_access_method_agreed", "materials_access_status_primary", "materials_access_status_secondary", "materials_access_status_match", "materials_access_status_agreed", "materials_identify_method_primary", "materials_identify_method_secondary", 
+  "analysis_statement_primary", "analysis_statement_secondary", "analysis_statement_verbatim_primary", "analysis_statement_verbatim_secondary", "analysis_statement_match", "analysis_statement_agreed", "analysis_access_method_primary", "analysis_access_method_secondary", "analysis_access_method_match", "analysis_access_method_agreed", "analysis_access_status_primary", "analysis_access_status_secondary", "analysis_access_status_match", "analysis_access_status_agreed", "analysis_identify_method_primary", "analysis_identify_method_secondary", 
+  "funding_statement_primary", "funding_statement_secondary", "funding_statement_verbatim_primary", "funding_statement_verbatim_secondary", "funding_statement_match", "funding_statement_agreed", "funding_identify_method_primary", "funding_identify_method_secondary", 
+  "coi_statement_primary", "coi_statement_secondary", "coi_statement_verbatim_primary", "coi_statement_verbatim_secondary", "coi_statement_match", "coi_statement_agreed", "coi_identify_method_primary", "coi_identify_method_secondary", "notes_primary", "notes_secondary")
+```
+
+# Resolve coding differences 
+```{r}
+
+# firstly, if one coder found an open access version, that's sufficient to make that the agreed classification, so let's do that first:
+d_wide <- d_wide %>%
+  mutate(open_access_status_agreed = case_when(
+    open_access_status_primary == "Yes" | open_access_status_secondary == "Yes" ~ "Yes",
+    TRUE ~ open_access_status_agreed 
+  ))
+
+# second, let's find the cases where the primary and secondary coders did not agree on whether an article was empirical (and therefore eligible)
+# NOT RUN d_wide %>% 
+#   filter(eligible_empirical_primary != eligible_empirical_secondary)
+# TEH will now check each of these manually and decide on the agreed upon classification, which will be added below.
+
+d_wide <- d_wide %>%
+  mutate(eligible_empirical_agreed = case_when(
+    article_id == "71180" ~ "No",
+    article_id == "33021" ~ "Yes",
+    article_id == "120" ~  "Yes",
+    article_id == "8710" ~  "No",
+    article_id == "13823" ~ "Yes",
+    article_id == "61098" ~ "No",
+    article_id == "11240" ~ "No",
+    article_id == "46814" ~ "No",
+    article_id == "60074" ~ "No", 
+    article_id == "38574" ~ "No",
+    TRUE ~ eligible_empirical_agreed # for any other article id, retain whatever is already in this column
+  ))
+
+# check how many eligible articles in each sample (should be 200)
+# d_wide %>% 
+#   filter(eligible_empirical_agreed == "Yes") %>% count(sample_id)
+
+# make a copy of the dataframe with only eligible articles for which there are coder disagreements to be resolved by a third coder
+
+# Add a new column to check if any specified columns are FALSE
+d_wide <- d_wide %>%
+  rowwise() %>%
+  mutate(any_disagreements = case_when(
+    any(!across(ends_with("_statement_match"))) ~ TRUE,
+    any(!across(ends_with("_access_method_match"))) ~ TRUE,
+    any(!across(ends_with("_design_match"))) ~ TRUE, 
+    any(!across(ends_with("access_status_match"))) ~ TRUE,
+    TRUE ~ FALSE))
+
+
+# prepare for output
+d_wide_disagreements <- d_wide %>%
+  arrange(desc(eligible_empirical_agreed), desc(any_disagreements))
+
+# output dataframe with disagreements to be resolved manually
+write_csv(d_wide_disagreements, here('data','primary','d_with_disagreements.csv'))
+
+# load in dataframe with disagreements resolved manually, 
+d <- read_csv(here('data','primary','d_with_disagreements_resolved.csv'))
+```
+
+```{r}
+# select only agreed upon coding
+d <- d %>% 
+  select(article_id, sample_id, open_access_status_agreed, eligible_empirical_agreed, research_design_agreed, prereg_statement_verbatim_primary, prereg_statement_agreed, prereg_access_method_agreed, prereg_access_status_agreed, data_statement_verbatim_primary, data_statement_agreed, data_access_method_agreed, data_access_status_agreed, materials_statement_verbatim_primary, materials_statement_agreed, materials_access_method_agreed, materials_access_status_agreed, analysis_statement_verbatim_primary, analysis_statement_agreed, analysis_access_method_agreed, analysis_access_status_agreed, funding_statement_verbatim_primary, funding_statement_agreed, coi_statement_verbatim_primary, coi_statement_agreed) %>% 
+  rename_with(~ str_remove(., "_agreed"), ends_with("_agreed")) # remove the word agreed from the column name for more efficient coding
+```
+
+# Eligibility
+
+How many articles couldn't be accessed at all?
+```{r}
+d %>% filter(open_access_status == "No I cannot access any version of the article") %>% nrow()
+d %>% filter(open_access_status == "One coder cannot access any version of the article")
+```
+
+```{r}
+d %>% 
+  filter(open_access_status %notin% c("No I cannot access any version of the article", "One coder cannot access any version of the article")) %>% # for articles we could access
+  filter(eligible_empirical == "No") %>%
+  count(sample_id)
+
+d_eligible <- d %>% 
+  filter(open_access_status %notin% c("No I cannot access any version of the article", "One coder cannot access any version of the article")) %>% # for articles we could access
+  filter(eligible_empirical == "Yes")
+```
+
+# Research design
+
+```{r}
+research_design_sum <- d_eligible %>% count(sample_id, research_design)
+```
+
+
+# Open access
+
+```{r}
+open_access_sum <- d_eligible %>%
+  count_prop_ci(open_access_status)
+```
+
+# Preregistration
+
+## Statement
+```{r}
+prereg_statement_sum <- d_eligible %>%
+  count_prop_ci(prereg_statement)
+```
+
+## Functional preregistration
+
+Occasionally a statement said there was a preregistration but we could not access it. So below we derive a prevalence estimate for *functional* preregistration i.e., articles that stated the research was preregistered and the preregistration could be accessed.
+
+```{r}
+prereg_functional_sum <- d_eligible %>%
+  count_prop_ci(prereg_statement, prereg_access_status)
+```
+
+## Access method
+```{r}
+prereg_access_sum <- d_eligible %>%
+  filter(prereg_statement == "YES the statement says that there is a preregistration") %>%
+  count(sample_id, prereg_access_method, .drop = F)
+```
+
+# Materials
+
+## Statement
+```{r}
+materials_statement_sum <- d_eligible %>%
+  count_prop_ci(materials_statement)
+```
+
+## Functional availability of materials
+
+Occasionally a statement said that materials were available but we could not find or immediately access them. So below we derive a prevalence estimate for *functional* availability of materials i.e., articles that stated materials were available and we could in fact find and access materials.
+
+```{r}
+materials_functional_sum <-d_eligible %>%
+  count_prop_ci(materials_statement, materials_access_status)
+```
+## Access method
+```{r}
+materials_access_sum <-d_eligible %>%
+  count(sample_id, materials_statement, materials_access_status, materials_access_method, .drop = F)
+```
+
+# Data
+
+## Statement
+```{r}
+data_statement_sum <- d_eligible %>%
+  count_prop_ci(data_statement)
+```
+
+## Functional availability of data
+
+Occasionally a statement said that data were available but we could not find or immediately access them. So below we derive a prevalence estimate for *functional* availability of data i.e., articles that stated data were available and we could in fact find and access data.
+
+```{r}
+data_functional_sum <-d_eligible %>%
+  count_prop_ci(data_statement, data_access_status)
+```
+
+## Access method
+```{r}
+data_access_sum <- d_eligible %>%
+  count(sample_id, data_statement, data_access_status, data_access_method, .drop = F)
+```
+
+# Analysis script availability
+
+## Statement
+```{r}
+analysis_statement_sum <-d_eligible %>%
+  count_prop_ci(analysis_statement)
+```
+
+## Functional availability of analysis scripts
+
+Occasionally a statement said that analysis scripts were available but we could not find or immediately access them. So below we derive a prevalence estimate for *functional* availability of analysis scripts i.e., articles that stated analysis scripts were availabile and we could in fact find and access analysis scripts.
+
+```{r}
+analysis_functional_sum <-d_eligible %>%
+  count_prop_ci(analysis_statement, analysis_access_status)
+```
+
+## Access method
+```{r}
+analysis_access_sum <- d_eligible %>%
+  count(sample_id, analysis_statement, analysis_access_status, analysis_access_method, .drop = F)
+```
+
+# Funding disclosures
+
+## Statement
+```{r}
+funding_any_sum <- d_eligible %>%
+  mutate(funding_statement_any = ifelse(funding_statement %in% c("YES the statement discloses at least one source of funding","YES the statement says that there was no relevant funding"), "Yes", "No")) %>%
+  count_prop_ci(funding_statement_any)
+
+funding_detail_sum <- d_eligible %>%
+  count_prop_ci(funding_statement)
+```
+
+# Conflict of interest disclosures
+
+## Statement
+```{r}
+coi_any_sum <- d_eligible %>%
+  mutate(coi_statement_any = ifelse(coi_statement %in% c("YES the statement discloses at least one conflict of interest","YES the statement says that there were no conflicts of interest"), "Yes", "No")) %>%
+  count_prop_ci(coi_statement_any)
+
+coi_detail_sum <- d_eligible %>%
+  count_prop_ci(coi_statement)
+```
+
+# Plots
+
+```{r}
+plot_data <- bind_rows(
+  
+  open_access_sum %>%
+    filter(open_access_status == "Yes") %>%
+    mutate(practice = "Open access", var = "open_access_statement", type = "statement") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  prereg_statement_sum %>% 
+    filter(prereg_statement == "YES the statement says that there is a preregistration") %>%
+    mutate(practice = "Preregistration", var = "prereg_statement", type = "statement") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+
+  prereg_functional_sum %>% 
+    filter(prereg_statement == "YES the statement says that there is a preregistration", prereg_access_status == "YES") %>%
+    mutate(practice = "Preregistration", var = "prereg_functional", type = "functional") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  materials_statement_sum %>% 
+    filter(materials_statement == "YES the statement says that the materials are available") %>%
+    mutate(practice = "Materials", var = "materials_statement", type = "statement") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  materials_functional_sum %>% 
+    filter(materials_statement == "YES the statement says that the materials are available", materials_access_status == "YES") %>%
+    mutate(practice = "Materials", var = "materials_functional", type = "functional") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  data_statement_sum %>% 
+    filter(data_statement == "YES the statement says that the data are available") %>%
+    mutate(practice = "Data", var = "data_statement", type = "statement") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  data_functional_sum %>% 
+    filter(data_statement == "YES the statement says that the data are available", data_access_status == "YES") %>%
+    mutate(practice = "Data", var = "data_functional", type = "functional") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  analysis_statement_sum %>% 
+    filter(analysis_statement == "YES the statement says that the analysis scripts are available") %>%
+    mutate(practice = "Analysis scripts", var = "analysis_statement", type = "statement") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  analysis_functional_sum %>% 
+    filter(analysis_statement == "YES the statement says that the analysis scripts are available", analysis_access_status == "YES") %>%
+    mutate(practice = "Analysis scripts",var = "analysis_functional", type = "functional") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  funding_any_sum %>%
+    filter(funding_statement_any == "Yes") %>%
+    mutate(practice = "Funding",var = "funding_statement_any", type = "statement") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
+  
+  coi_any_sum %>%
+    filter(coi_statement_any == "Yes") %>%
+    mutate(practice = "Conflict of interest",var = "coi_statement_any", type = "statement") %>%
+    select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr)
+) %>%
+  mutate(N = 200,
+         sample_label = ifelse(sample_id == "Field", paste0("Field-wide\n2022"), paste0("Prominent\n2022")))
+```
+```{r}
+d_2015 <- read_csv(here('data','primary','d_Hardwicke2022.csv')) %>%
+  mutate(percent = round(n/N * 100, 0)) %>%
+  rowwise() %>%
+  mutate(
+    ci_lwr = round(prop.test(n, N)$conf.int * 100, 0)[1],
+    ci_upr = round(prop.test(n, N)$conf.int * 100, 0)[2],
+    sample_label = paste0("Field-wide\n~2015")
+  )
+```
+
+```{r core_practices_plot, fig.path = "figs/", fig.width = unit(10,"cm"), fig.height = unit(8,"cm")}
+plot_core <- plot_data %>%
+  bind_rows(d_2015) %>%
+  filter(practice %in% c("Preregistration","Materials","Data","Analysis scripts"),
+         type == "functional") %>%
+  mutate(practice = factor(practice, levels = c("Preregistration","Materials","Data","Analysis scripts")),
+         type = factor(type),
+         type = fct_recode(type, "Functionally available" = "functional")) %>%
+  ggplot(aes(x = sample_label, y = percent)) +
+  facet_wrap(. ~ practice) +
+    geom_pointrange(position = position_dodge(width = .2), shape = 21, size = 1, colour = "#333333",
+      aes(
+        fill = type,
+        ymin = ci_lwr,
+        ymax = ci_upr),
+      show.legend = F) +
+    geom_text(
+             aes(label = paste0(round(percent,0),'%')),
+             show.legend = FALSE,
+             size = 6,
+             nudge_x = .2,
+            colour = '#333333') +
+    xlab('Sample') + 
+    ylab('Articles (%) with functionally availability') +
+    scale_y_continuous(limits = c(0,30), breaks = seq(0,30,10)) +
+    scale_fill_manual(values = "#7AD389") +
+    labs(fill = NULL) + # hide legend title
+    theme_custom() +
+    theme(panel.background = element_rect(fill = "ivory"))
+```
+
+
+```{r other_practices_plot, fig.path = "figs/", fig.width = unit(10,"cm"), fig.height = unit(6,"cm")}
+plot_other <- plot_data %>%
+  bind_rows(d_2015) %>%
+  filter(practice %in% c("Open access", "Conflict of interest", "Funding"), var %in% c("open_access_statement", "funding_statement_any", "coi_statement_any")) %>%
+  mutate(practice = factor(practice, levels = c("Open access", "Conflict of interest", "Funding")),
+         practice = fct_recode(practice, "Conflict of interest\nstatement" = "Conflict of interest", "Funding\nstatement" = "Funding"),
+         type = factor(type)) %>%
+  ggplot(aes(x = sample_label, y = percent)) +
+  facet_wrap(. ~ practice) +
+    geom_pointrange(position = position_dodge(width = .2), shape = 21, size = 1, colour = "#333333",
+      aes(
+        fill = type,
+        ymin = ci_lwr,
+        ymax = ci_upr),
+      show.legend = F) +
+      geom_text(
+             aes(label = paste0(round(percent,0),'%')),
+             show.legend = FALSE,
+             size = 6,
+             nudge_x = .32,
+            colour = '#333333') +
+    xlab('Sample') + 
+    ylab('Articles (%)') +
+    scale_y_continuous(limits = c(0,100), breaks = seq(0,100,25)) +
+    scale_fill_manual(values = "#B47AD3") +
+    labs(fill = NULL) + # hide legend title
+    theme_custom() +
+    theme(panel.background = element_rect(fill = "ivory"))
+```
+
+```{r fig_one, fig.path = "figs/", fig.width = unit(11.5,"cm"), fig.height = unit(14,"cm")}
+library(cowplot)
+plot_grid(plot_core,plot_other, nrow = 2, rel_heights = c(1.5,1))
+```
+
+
+
