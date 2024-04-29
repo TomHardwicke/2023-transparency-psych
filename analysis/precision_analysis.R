@@ -11,7 +11,7 @@ library(tidyverse)
 # custom ggplot theme
 
 theme_custom <- function () { 
-  theme_grey(base_size = 14, base_family = "sans") %+replace% 
+  theme_grey(base_size = 18, base_family = "sans") %+replace% 
     theme(
       # plot margin
       plot.margin = unit(rep(0.5, 4), "cm"),
@@ -158,18 +158,18 @@ precisionCurve(expectedProportion =.5, # Specify the anticipated proportion. Use
   # this code annotates the precision curve with the moes computed above
   annotate("segment", x = moe_object1$target_sample_size, xend = moe_object1$target_sample_size, y = 0, yend = moe_object1$moe, colour = "purple", size=1, alpha=0.6) +
   annotate("segment", x = 0, xend = moe_object1$target_sample_size, y = moe_object1$moe, yend = moe_object1$moe, colour = "purple", size=1, alpha=0.6) +
-  annotate("label", x = 20, y = moe_object1$moe, colour = "purple", size=3, alpha=1, label = round(moe_object1$moe,3)) +
-  annotate("label", x = moe_object1$target_sample_size, y = 0.02, colour = "purple", size=3, alpha=1, label = moe_object1$target_sample_size) + 
+  annotate("label", x = 20, y = moe_object1$moe, colour = "purple", size=4, alpha=1, label = round(moe_object1$moe,3)) +
+  annotate("label", x = moe_object1$target_sample_size, y = 0.02, colour = "purple", size=4, alpha=1, label = moe_object1$target_sample_size) + 
   
   annotate("segment", x = moe_object2$target_sample_size, xend = moe_object2$target_sample_size, y = 0, yend = moe_object2$moe, colour = "green", size=1, alpha=0.6) +
   annotate("segment", x = 0, xend =  moe_object2$target_sample_size, y = moe_object2$moe, yend = moe_object2$moe, colour = "green", size=1, alpha=0.6) +
-  annotate("label", x = 20, y = moe_object2$moe, colour = "green", size=3, alpha=1, label = round(moe_object2$moe,3)) +
-  annotate("label", x = moe_object2$target_sample_size, y = 0.02, colour = "green", size=3, alpha=1, label = moe_object2$target_sample_size) +
+  annotate("label", x = 20, y = moe_object2$moe, colour = "green", size=4, alpha=1, label = round(moe_object2$moe,3)) +
+  annotate("label", x = moe_object2$target_sample_size, y = 0.02, colour = "green", size=4, alpha=1, label = moe_object2$target_sample_size) +
   
   annotate("segment", x = moe_object3$target_sample_size, xend = moe_object3$target_sample_size, y = 0, yend = moe_object3$moe, colour = "orange", size=1, alpha=0.6) +
   annotate("segment", x = 0, xend =  moe_object3$target_sample_size, y = moe_object3$moe, yend = moe_object3$moe, colour = "orange", size=1, alpha=0.6) +
-  annotate("label", x = 20, y = moe_object3$moe, colour = "orange", size=3, alpha=1, label = round(moe_object3$moe,3)) +
-  annotate("label", x = moe_object3$target_sample_size, y = 0.02, colour = "orange", size=3, alpha=1, label = moe_object3$target_sample_size) 
+  annotate("label", x = 20, y = moe_object3$moe, colour = "orange", size=4, alpha=1, label = round(moe_object3$moe,3)) +
+  annotate("label", x = moe_object3$target_sample_size, y = 0.02, colour = "orange", size=4, alpha=1, label = moe_object3$target_sample_size) 
 
 # References  ---------------------------------
 
