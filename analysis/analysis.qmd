@@ -292,7 +292,6 @@ d_wide <- d_wide %>%
     any(!across(ends_with("access_status_match"))) ~ TRUE,
     TRUE ~ FALSE))
 
-
 # prepare for output
 d_wide_disagreements <- d_wide %>%
   arrange(desc(eligible_empirical_agreed), desc(any_disagreements))
@@ -302,6 +301,39 @@ write_csv(d_wide_disagreements, here('data','primary','d_with_disagreements.csv'
 
 # load in dataframe with disagreements resolved manually, 
 d <- read_csv(here('data','primary','d_with_disagreements_resolved.csv'))
+```
+
+```{r}
+# calculate inter-rate agreement for statement variables
+# prereg
+prereg_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(prereg_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(prereg_statement_match == T) %>% pull(percent)
+
+# materials
+materials_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(materials_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(materials_statement_match == T) %>% pull(percent)
+
+d_wide_disagreements %>% 
+  filter(eligible_empirical_agreed == "Yes", materials_statement_match == F) %>%
+  count(materials_statement_primary, materials_statement_secondary)
+
+# data
+data_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(data_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(data_statement_match == T) %>% pull(percent)
+
+d_wide_disagreements %>% 
+  filter(eligible_empirical_agreed == "Yes", data_statement_match == F) %>%
+  count(data_statement_primary, data_statement_secondary)
+
+# analysis scripts
+analysis_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(analysis_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(analysis_statement_match == T) %>% pull(percent)
+
+d_wide_disagreements %>% 
+  filter(eligible_empirical_agreed == "Yes", analysis_statement_match == F) %>%
+  count(analysis_statement_primary, analysis_statement_secondary)
+
+# coi
+coi_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(coi_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(coi_statement_match == T) %>% pull(percent)
+
+# funding
+funding_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(funding_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(funding_statement_match == T) %>% pull(percent)
 ```
 
 ```{r}
@@ -530,7 +562,7 @@ d_2015 <- read_csv(here('data','primary','d_Hardwicke2022.csv')) %>%
   mutate(
     ci_lwr = round(prop.test(n, N)$conf.int * 100, 0)[1],
     ci_upr = round(prop.test(n, N)$conf.int * 100, 0)[2],
-    sample_label = paste0("Field-wide\n~2015")
+    sample_label = paste0("Field-wide\n2014-2017")
   )
 ```
 
