@@ -1,16 +1,16 @@
 sample_id,practice,var,type,n,N
-Field ~2015,Preregistration,prereg_statement,statement,5,188
-Field ~2015,Preregistration,prereg_functional,functional,4,188
-Field ~2015,Materials,materials_statement,statement,26,183
-Field ~2015,Materials,materials_functional,functional,19,183
-Field ~2015,Data,data_statement,statement,4,188
-Field ~2015,Data,data_functional,functional,3,188
-Field ~2015,Analysis scripts,analysis_statement,statement,1,188
-Field ~2015,Analysis scripts,analysis_functional,functional,1,188
-Field ~2015,Funding,funding_disclosed,disclosed,124,228
-Field ~2015,Funding,funding_none,explicit none,18,228
-Field ~2015,Funding,funding_statement_any,statement,142,228
-Field ~2015,Conflict of interest,coi_disclosed,disclosed,12,228
-Field ~2015,Conflict of interest,coi_none,explicit none,76,228
-Field ~2015,Conflict of interest,coi_statement_any,statement,88,228
-Field ~2015,Open access,open_access_statement,statement,154,237
+Field 2014-2017,Preregistration,prereg_statement,statement,5,188
+Field 2014-2017,Preregistration,prereg_functional,functional,4,188
+Field 2014-2017,Materials,materials_statement,statement,26,183
+Field 2014-2017,Materials,materials_functional,functional,19,183
+Field 2014-2017,Data,data_statement,statement,4,188
+Field 2014-2017,Data,data_functional,functional,3,188
+Field 2014-2017,Analysis scripts,analysis_statement,statement,1,188
+Field 2014-2017,Analysis scripts,analysis_functional,functional,1,188
+Field 2014-2017,Funding,funding_disclosed,disclosed,124,228
+Field 2014-2017,Funding,funding_none,explicit none,18,228
+Field 2014-2017,Funding,funding_statement_any,statement,142,228
+Field 2014-2017,Conflict of interest,coi_disclosed,disclosed,12,228
+Field 2014-2017,Conflict of interest,coi_none,explicit none,76,228
+Field 2014-2017,Conflict of interest,coi_statement_any,statement,88,228
+Field 2014-2017,Open access,open_access_statement,statement,154,237
