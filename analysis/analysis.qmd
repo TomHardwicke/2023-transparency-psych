@@ -8,26 +8,50 @@ format: html
 ```{r}
 library(tidyverse)
 library(here)
-library(tidylog)
+# library(tidylog) for coding feedback during development only
+library(DescTools)
 ```
 
 # Define summary function
 
 ```{r}
-count_prop_ci <- function(data, ...) {
+count_prop_ci <- function(data, ..., ci_method) {
   columns <- enquos(...)
   
-  data %>%
-    count(sample_id, !!!columns, .drop = FALSE) %>%
-    group_by(sample_id) %>%
-    mutate(N = sum(n),
-           percent = round(n/N * 100, 0)) %>%
-    rowwise() %>%
-    mutate(
-      ci_lwr = round(prop.test(n, N)$conf.int * 100, 0)[1],
-      ci_upr = round(prop.test(n, N)$conf.int * 100, 0)[2],
-      values = paste0(n, '/', N, ' (', percent, '% [', ci_lwr, '%-', ci_upr, '%])')
-    )
+  #old wilson method
+    # data %>%
+    #   count(sample_id, !!!columns, .drop = FALSE) %>%
+    #   group_by(sample_id) %>%
+    #   mutate(N = sum(n),
+    #          percent = round(n/N * 100, 0)) %>%
+    #   rowwise() %>%
+    #   mutate(
+    #     ci_lwr = round(prop.test(n, N)$conf.int * 100, 0)[1],
+    #     ci_upr = round(prop.test(n, N)$conf.int * 100, 0)[2],
+    #     values = paste0(n, '/', N, ' (', percent, '% [', ci_lwr, '%-', ci_upr, '%])')
+
+  data_field <- data %>%
+      filter(sample_id == "Field") %>%
+      count(!!!columns, .drop = FALSE) 
+  
+  data_field <- data_field %>%
+      cbind(MultinomCI(data_field$n, conf.level = 0.95, sides = "two.sided", method=ci_method)) %>%
+      mutate(sample_id = "Field", N = sum(n))
+    
+  data_prom <- data %>%
+      filter(sample_id == "Prominent") %>%
+      count(!!!columns, .drop = FALSE) 
+  
+  data_prom <- data_prom %>%
+      cbind(MultinomCI(data_prom$n, conf.level = 0.95, sides = "two.sided", method=ci_method)) %>%
+      mutate(sample_id = "Prominent", N = sum(n))
+  
+  data_all <- bind_rows(data_field, data_prom) %>%
+    select(sample_id, !!!columns, n, N, percent = est, ci_lwr = lwr.ci, ci_upr = upr.ci) %>%
+    mutate(percent = percent*100, ci_lwr = ci_lwr*100, ci_upr = ci_upr*100, 
+           report = paste0(n,' (',signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%])'))
+  
+  return(data_all)
 }
 ```
 
@@ -247,8 +271,8 @@ d_wide <- d_wide %>%
 ```
 
 # Resolve coding differences 
-```{r}
 
+```{r}
 # firstly, if one coder found an open access version, that's sufficient to make that the agreed classification, so let's do that first:
 d_wide <- d_wide %>%
   mutate(open_access_status_agreed = case_when(
@@ -304,7 +328,7 @@ d <- read_csv(here('data','primary','d_with_disagreements_resolved.csv'))
 ```
 
 ```{r}
-# calculate inter-rate agreement for statement variables
+# calculate inter-rater agreement for statement variables
 # prereg
 prereg_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(prereg_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(prereg_statement_match == T) %>% pull(percent)
 
@@ -339,7 +363,7 @@ funding_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes
 ```{r}
 # select only agreed upon coding
 d <- d %>% 
-  select(article_id, sample_id, open_access_status_agreed, eligible_empirical_agreed, research_design_agreed, prereg_statement_verbatim_primary, prereg_statement_agreed, prereg_access_method_agreed, prereg_access_status_agreed, data_statement_verbatim_primary, data_statement_agreed, data_access_method_agreed, data_access_status_agreed, materials_statement_verbatim_primary, materials_statement_agreed, materials_access_method_agreed, materials_access_status_agreed, analysis_statement_verbatim_primary, analysis_statement_agreed, analysis_access_method_agreed, analysis_access_status_agreed, funding_statement_verbatim_primary, funding_statement_agreed, coi_statement_verbatim_primary, coi_statement_agreed) %>% 
+  select(article_id, sample_id, open_access_status_agreed, eligible_empirical_agreed, research_design_agreed, prereg_statement_verbatim_primary, prereg_statement_agreed, prereg_access_method_agreed, prereg_access_status_agreed, prereg_access_detail, data_statement_verbatim_primary, data_statement_agreed, data_reason, data_access_method_agreed, data_access_status_agreed, data_access_detail, materials_statement_verbatim_primary, materials_statement_agreed, materials_reason, materials_access_method_agreed, materials_access_status_agreed, materials_access_detail, analysis_statement_verbatim_primary, analysis_statement_agreed, analysis_reason, analysis_access_method_agreed, analysis_access_status_agreed, analysis_access_detail, funding_statement_verbatim_primary, funding_statement_agreed, coi_statement_verbatim_primary, coi_statement_agreed) %>% 
   rename_with(~ str_remove(., "_agreed"), ends_with("_agreed")) # remove the word agreed from the column name for more efficient coding
 ```
 
@@ -368,12 +392,11 @@ d_eligible <- d %>%
 research_design_sum <- d_eligible %>% count(sample_id, research_design)
 ```
 
-
 # Open access
 
 ```{r}
 open_access_sum <- d_eligible %>%
-  count_prop_ci(open_access_status)
+  count_prop_ci(open_access_status, ci_method = "wilson")
 ```
 
 # Preregistration
@@ -381,7 +404,7 @@ open_access_sum <- d_eligible %>%
 ## Statement
 ```{r}
 prereg_statement_sum <- d_eligible %>%
-  count_prop_ci(prereg_statement)
+  count_prop_ci(prereg_statement, ci_method = "sisonglaz")
 ```
 
 ## Functional preregistration
@@ -390,22 +413,75 @@ Occasionally a statement said there was a preregistration but we could not acces
 
 ```{r}
 prereg_functional_sum <- d_eligible %>%
-  count_prop_ci(prereg_statement, prereg_access_status)
+  count_prop_ci(prereg_statement, prereg_access_status, ci_method = "sisonglaz")
 ```
-
 ## Access method
 ```{r}
 prereg_access_sum <- d_eligible %>%
-  filter(prereg_statement == "YES the statement says that there is a preregistration") %>%
+  filter(prereg_statement == "YES the statement says that there is a preregistration", prereg_access_status == "YES") %>%
   count(sample_id, prereg_access_method, .drop = F)
 ```
+## Access failures
+```{r}
+prereg_access_detail_sum <- d_eligible %>%
+  filter(prereg_access_status == "NO") %>%
+  count(sample_id, prereg_access_detail, .drop = F)
+```
+
+## Table
+```{r}
+prereg_table <- bind_rows(
+  prereg_statement_sum %>%
+    select(prereg_statement, sample_id, report) %>%
+    pivot_wider(id_cols = prereg_statement, names_from = sample_id, values_from = report) %>%
+    mutate(prereg_access_status = NA, prereg_access_method = NA, prereg_access_detail = NA),
+
+  prereg_functional_sum %>%
+    filter(!is.na(prereg_access_status)) %>%
+    select(prereg_statement, prereg_access_status, sample_id, report) %>%
+    pivot_wider(id_cols = c(prereg_statement, prereg_access_status), names_from = sample_id, values_from = report) %>%
+    mutate(prereg_access_method = NA, prereg_access_detail = NA),
+  
+  prereg_access_sum %>%
+    mutate(prereg_statement = "YES the statement says that there is a preregistration", prereg_access_status = "YES") %>%
+    select(prereg_statement, prereg_access_status, prereg_access_method, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(prereg_statement, prereg_access_status, prereg_access_method), names_from = sample_id, values_from = report) %>%
+    mutate(prereg_access_detail = NA) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent))),
+  
+  prereg_access_detail_sum %>% 
+    mutate(prereg_statement = "YES the statement says that there is a preregistration", prereg_access_method = NA, prereg_access_status = "NO") %>%
+    select(prereg_statement, prereg_access_status, prereg_access_method, prereg_access_detail, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(prereg_statement, prereg_access_status, prereg_access_method, prereg_access_detail), names_from = sample_id, values_from = report) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent))),
+  
+  ) %>%
+  mutate(prereg_statement = fct_na_value_to_level(prereg_statement, "NA"),
+         prereg_statement = factor(prereg_statement, levels = 
+                                     c("YES the statement says that there is a preregistration",
+                                       "YES the statement says that there is no preregistration",
+                                       "NO there is no statement about preregistration",
+                                       "NA")),
+         prereg_access_status = fct_na_value_to_level(prereg_access_status, "NA"),
+         prereg_access_status = factor(prereg_access_status, levels = 
+                                         c("NA", "YES", "NO"))) %>%
+  select(prereg_statement, prereg_access_status, prereg_access_method, prereg_access_detail, Field, Prominent) %>%
+  arrange(prereg_statement, prereg_access_status)
+```
+
+```{r}
+knitr::kable(prereg_table)
+```
+
 
 # Materials
 
 ## Statement
 ```{r}
 materials_statement_sum <- d_eligible %>%
-  count_prop_ci(materials_statement)
+  count_prop_ci(materials_statement, ci_method = "sisonglaz")
 ```
 
 ## Functional availability of materials
@@ -413,13 +489,82 @@ materials_statement_sum <- d_eligible %>%
 Occasionally a statement said that materials were available but we could not find or immediately access them. So below we derive a prevalence estimate for *functional* availability of materials i.e., articles that stated materials were available and we could in fact find and access materials.
 
 ```{r}
-materials_functional_sum <-d_eligible %>%
-  count_prop_ci(materials_statement, materials_access_status)
+materials_functional_sum <- d_eligible %>%
+  count_prop_ci(materials_statement, materials_access_status, ci_method = "sisonglaz")
 ```
+
 ## Access method
 ```{r}
 materials_access_sum <-d_eligible %>%
+  filter(materials_statement == "YES the statement says that the materials are available", materials_access_status == "YES") %>%
   count(sample_id, materials_statement, materials_access_status, materials_access_method, .drop = F)
+```
+## Access failures
+```{r}
+materials_access_detail_sum <- d_eligible %>%
+  filter(materials_access_status == "NO") %>%
+  count(sample_id, materials_access_detail, .drop = F)
+```
+
+## Reasons for not sharing
+```{r}
+materials_reasons_sum <- d_eligible %>%
+  filter(materials_statement == "YES the statement says that the materials are not available") %>%
+  count(sample_id, materials_reason, .drop = F)
+```
+
+## Table
+```{r}
+materials_table <- bind_rows(
+  materials_statement_sum %>%
+    select(materials_statement, sample_id, report) %>%
+    pivot_wider(id_cols = materials_statement, names_from = sample_id, values_from = report) %>%
+    mutate(materials_access_status = NA, materials_access_method = NA, materials_access_detail = NA, materials_reason = NA),
+
+  materials_functional_sum %>%
+    filter(!is.na(materials_access_status)) %>%
+    select(materials_statement, materials_access_status, sample_id, report) %>%
+    pivot_wider(id_cols = c(materials_statement, materials_access_status), names_from = sample_id, values_from = report) %>%
+    mutate(materials_access_method = NA, mateials_access_detail = NA, materials_reason = NA),
+  
+  materials_access_sum %>%
+    select(materials_statement, materials_access_status, materials_access_method, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(materials_statement, materials_access_status, materials_access_method), names_from = sample_id, values_from = report) %>%
+    mutate(materials_access_detail = NA, materials_reason = NA) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent))),
+  
+  materials_access_detail_sum %>% 
+    mutate(materials_statement = "YES the statement says that the materials are available", materials_access_method = NA, materials_access_status = "NO") %>%
+    select(materials_statement, materials_access_status, materials_access_method, materials_access_detail, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(materials_statement, materials_access_status, materials_access_method, materials_access_detail), names_from = sample_id, values_from = report) %>%
+    mutate(materials_reason = NA) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent))),
+  
+  materials_reasons_sum %>%
+    mutate(materials_statement = "YES the statement says that the materials are not available", materials_access_method = NA, materials_access_detail = NA, materials_access_status = NA) %>%
+    select(materials_statement, materials_access_status, materials_access_method, materials_access_detail, materials_reason, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(materials_statement, materials_access_status, materials_access_method, materials_access_detail, materials_reason), names_from = sample_id, values_from = report) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent)))
+  ) %>%
+  mutate(materials_statement = fct_na_value_to_level(materials_statement, "NA"),
+         materials_statement = factor(materials_statement, levels = 
+                                     c("YES the statement says that the materials are available",
+                                       "UNCLEAR a third party source is identified without any indication of availability",
+                                       "YES the statement says that the materials are not available",
+                                       "NO there is no materials availability statement",
+                                       "NA")),
+         materials_access_status = fct_na_value_to_level(materials_access_status, "NA"),
+         materials_access_status = factor(materials_access_status, levels = 
+                                         c("NA", "YES", "NO"))) %>%
+  select(materials_statement, materials_access_status, materials_access_method, materials_access_detail, materials_reason, Field, Prominent) %>%
+  arrange(materials_statement, materials_access_status)
+```
+
+```{r}
+knitr::kable(materials_table)
 ```
 
 # Data
@@ -427,7 +572,7 @@ materials_access_sum <-d_eligible %>%
 ## Statement
 ```{r}
 data_statement_sum <- d_eligible %>%
-  count_prop_ci(data_statement)
+  count_prop_ci(data_statement, ci_method = "sisonglaz")
 ```
 
 ## Functional availability of data
@@ -435,22 +580,90 @@ data_statement_sum <- d_eligible %>%
 Occasionally a statement said that data were available but we could not find or immediately access them. So below we derive a prevalence estimate for *functional* availability of data i.e., articles that stated data were available and we could in fact find and access data.
 
 ```{r}
-data_functional_sum <-d_eligible %>%
-  count_prop_ci(data_statement, data_access_status)
+data_functional_sum <- d_eligible %>%
+  count_prop_ci(data_statement, data_access_status, ci_method = "sisonglaz")
 ```
 
 ## Access method
 ```{r}
 data_access_sum <- d_eligible %>%
+  filter(data_statement == "YES the statement says that the data are available", data_access_status == "YES") %>%
   count(sample_id, data_statement, data_access_status, data_access_method, .drop = F)
+```
+
+## Access failures
+```{r}
+data_access_detail_sum <- d_eligible %>%
+  filter(data_access_status == "NO") %>%
+  count(sample_id, data_access_detail, .drop = F)
+```
+## Reasons for not sharing
+```{r}
+data_reasons_sum <- d_eligible %>%
+  filter(data_statement == "YES the statement says that the data are not available") %>%
+  count(sample_id, data_reason, .drop = F)
+```
+
+## Table
+```{r}
+data_table <- bind_rows(
+  data_statement_sum %>%
+    select(data_statement, sample_id, report) %>%
+    pivot_wider(id_cols = data_statement, names_from = sample_id, values_from = report) %>%
+    mutate(data_access_status = NA, data_access_method = NA, data_access_detail = NA, data_reason = NA),
+
+  data_functional_sum %>%
+    filter(!is.na(data_access_status)) %>%
+    select(data_statement, data_access_status, sample_id, report) %>%
+    pivot_wider(id_cols = c(data_statement, data_access_status), names_from = sample_id, values_from = report) %>%
+    mutate(data_access_method = NA, mateials_access_detail = NA, data_reason = NA),
+  
+  data_access_sum %>%
+    select(data_statement, data_access_status, data_access_method, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(data_statement, data_access_status, data_access_method), names_from = sample_id, values_from = report) %>%
+    mutate(data_access_detail = NA, data_reason = NA) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent))),
+  
+  data_access_detail_sum %>% 
+    mutate(data_statement = "YES the statement says that the data are available", data_access_method = NA, data_access_status = "NO") %>%
+    select(data_statement, data_access_status, data_access_method, data_access_detail, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(data_statement, data_access_status, data_access_method, data_access_detail), names_from = sample_id, values_from = report) %>%
+    mutate(data_reason = NA) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent))),
+  
+  data_reasons_sum %>%
+    mutate(data_statement = "YES the statement says that the data are not available", data_access_method = NA, data_access_detail = NA, data_access_status = NA) %>%
+    select(data_statement, data_access_status, data_access_method, data_access_detail, data_reason, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(data_statement, data_access_status, data_access_method, data_access_detail, data_reason), names_from = sample_id, values_from = report) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent)))
+  ) %>%
+  mutate(data_statement = fct_na_value_to_level(data_statement, "NA"),
+         data_statement = factor(data_statement, levels = 
+                                     c("YES the statement says that the data are available",
+                                       "UNCLEAR a third party source is identified without any indication of availability",
+                                       "YES the statement says that the data are not available",
+                                       "NO there is no data availability statement",
+                                       "NA")),
+         data_access_status = fct_na_value_to_level(data_access_status, "NA"),
+         data_access_status = factor(data_access_status, levels = 
+                                         c("NA", "YES", "NO"))) %>%
+  select(data_statement, data_access_status, data_access_method, data_access_detail, data_reason, Field, Prominent) %>%
+  arrange(data_statement, data_access_status)
+```
+
+```{r}
+knitr::kable(data_table)
 ```
 
 # Analysis script availability
 
 ## Statement
 ```{r}
-analysis_statement_sum <-d_eligible %>%
-  count_prop_ci(analysis_statement)
+analysis_statement_sum <- d_eligible %>%
+  count_prop_ci(analysis_statement, ci_method = "sisonglaz")
 ```
 
 ## Functional availability of analysis scripts
@@ -458,14 +671,83 @@ analysis_statement_sum <-d_eligible %>%
 Occasionally a statement said that analysis scripts were available but we could not find or immediately access them. So below we derive a prevalence estimate for *functional* availability of analysis scripts i.e., articles that stated analysis scripts were availabile and we could in fact find and access analysis scripts.
 
 ```{r}
-analysis_functional_sum <-d_eligible %>%
-  count_prop_ci(analysis_statement, analysis_access_status)
+analysis_functional_sum <- d_eligible %>%
+  count_prop_ci(analysis_statement, analysis_access_status, ci_method = "sisonglaz")
 ```
 
 ## Access method
 ```{r}
 analysis_access_sum <- d_eligible %>%
+  filter(analysis_statement == "YES the statement says that the analysis scripts are available", analysis_access_status == "YES") %>%
   count(sample_id, analysis_statement, analysis_access_status, analysis_access_method, .drop = F)
+```
+
+## Access failures
+```{r}
+analysis_access_detail_sum <- d_eligible %>%
+  filter(analysis_access_status == "NO") %>%
+  count(sample_id, analysis_access_detail, .drop = F)
+```
+
+## Reasons for not sharing
+```{r}
+analysis_reasons_sum <- d_eligible %>%
+  filter(analysis_statement == "YES the statement says that the analysis scripts are not available") %>%
+  count(sample_id, analysis_reason, .drop = F)
+```
+
+## Table
+```{r}
+analysis_table <- bind_rows(
+  analysis_statement_sum %>%
+    select(analysis_statement, sample_id, report) %>%
+    pivot_wider(id_cols = analysis_statement, names_from = sample_id, values_from = report) %>%
+    mutate(analysis_access_status = NA, analysis_access_method = NA, analysis_access_detail = NA, analysis_reason = NA),
+
+  analysis_functional_sum %>%
+    filter(!is.na(analysis_access_status)) %>%
+    select(analysis_statement, analysis_access_status, sample_id, report) %>%
+    pivot_wider(id_cols = c(analysis_statement, analysis_access_status), names_from = sample_id, values_from = report) %>%
+    mutate(analysis_access_method = NA, mateials_access_detail = NA, analysis_reason = NA),
+  
+  analysis_access_sum %>%
+    select(analysis_statement, analysis_access_status, analysis_access_method, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(analysis_statement, analysis_access_status, analysis_access_method), names_from = sample_id, values_from = report) %>%
+    mutate(analysis_access_detail = NA, analysis_reason = NA) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent))),
+  
+  analysis_access_detail_sum %>% 
+    mutate(analysis_statement = "YES the statement says that the analysis scripts are available", analysis_access_method = NA, analysis_access_status = "NO") %>%
+    select(analysis_statement, analysis_access_status, analysis_access_method, analysis_access_detail, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(analysis_statement, analysis_access_status, analysis_access_method, analysis_access_detail), names_from = sample_id, values_from = report) %>%
+    mutate(analysis_reason = NA) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent))),
+  
+  analysis_reasons_sum %>%
+    mutate(analysis_statement = "YES the statement says that the analysis scripts are not available", analysis_access_method = NA, analysis_access_detail = NA, analysis_access_status = NA) %>%
+    select(analysis_statement, analysis_access_status, analysis_access_method, analysis_access_detail, analysis_reason, sample_id, report = n) %>%
+    mutate(report = as.character(report)) %>%
+    pivot_wider(id_cols = c(analysis_statement, analysis_access_status, analysis_access_method, analysis_access_detail, analysis_reason), names_from = sample_id, values_from = report) %>%
+    arrange(desc(as.numeric(Field)), desc(as.numeric(Prominent)))
+  ) %>%
+  mutate(analysis_statement = fct_na_value_to_level(analysis_statement, "NA"),
+         analysis_statement = factor(analysis_statement, levels = 
+                                     c("YES the statement says that the analysis scripts are available",
+                                       "UNCLEAR a third party source is identified without any indication of availability",
+                                       "YES the statement says that the analysis scripts are not available",
+                                       "NO there is no analysis script availability statement",
+                                       "NA")),
+         analysis_access_status = fct_na_value_to_level(analysis_access_status, "NA"),
+         analysis_access_status = factor(analysis_access_status, levels = 
+                                         c("NA", "YES", "NO"))) %>%
+  select(analysis_statement, analysis_access_status, analysis_access_method, analysis_access_detail, analysis_reason, Field, Prominent) %>%
+  arrange(analysis_statement, analysis_access_status)
+```
+
+```{r}
+knitr::kable(analysis_table)
 ```
 
 # Funding disclosures
@@ -473,11 +755,39 @@ analysis_access_sum <- d_eligible %>%
 ## Statement
 ```{r}
 funding_any_sum <- d_eligible %>%
-  mutate(funding_statement_any = ifelse(funding_statement %in% c("YES the statement discloses at least one source of funding","YES the statement says that there was no relevant funding"), "Yes", "No")) %>%
-  count_prop_ci(funding_statement_any)
+  mutate(funding_statement = case_when(
+    funding_statement %in% c("YES the statement discloses at least one source of funding","YES the statement says that there was no relevant funding") ~ "Yes", 
+    funding_statement == "UNCLEAR" ~ "Unclear",
+    funding_statement == "NO there is no funding statement" ~ "No")) %>%
+  count_prop_ci(funding_statement, ci_method = "sisonglaz")
 
 funding_detail_sum <- d_eligible %>%
-  count_prop_ci(funding_statement)
+  count_prop_ci(funding_statement, ci_method = "sisonglaz")
+```
+
+## Table
+
+```{r}
+funding_table <- bind_rows(
+    funding_any_sum %>%
+      filter(funding_statement != "No") %>%
+      select(funding_statement, sample_id, report) %>%
+      pivot_wider(id_cols = funding_statement, names_from = sample_id, values_from = report),
+    funding_detail_sum %>%
+      filter(funding_statement %notin% c("No there is no funding statement", "UNCLEAR")) %>%
+      select(funding_statement, sample_id, report) %>%
+      pivot_wider(id_cols = funding_statement, names_from = sample_id, values_from = report)
+    ) %>%
+  mutate(funding_statement = factor(funding_statement, levels = 
+                                     c("Yes",
+                                       "YES the statement discloses at least one source of funding",
+                                       "YES the statement says that there was no relevant funding",
+                                       "Unclear",
+                                       "NO there is no funding statement"))) %>%
+  arrange(funding_statement)
+```
+```{r}
+knitr::kable(funding_table)
 ```
 
 # Conflict of interest disclosures
@@ -485,11 +795,39 @@ funding_detail_sum <- d_eligible %>%
 ## Statement
 ```{r}
 coi_any_sum <- d_eligible %>%
-  mutate(coi_statement_any = ifelse(coi_statement %in% c("YES the statement discloses at least one conflict of interest","YES the statement says that there were no conflicts of interest"), "Yes", "No")) %>%
-  count_prop_ci(coi_statement_any)
+  mutate(coi_statement = case_when(
+    coi_statement %in% c("YES the statement discloses at least one conflict of interest","YES the statement says that there were no conflicts of interest") ~ "Yes", 
+    coi_statement == "UNCLEAR" ~ "Unclear",
+    coi_statement == "NO there is no conflict of interest statement" ~ "No")) %>%
+  count_prop_ci(coi_statement, ci_method = "sisonglaz")
 
 coi_detail_sum <- d_eligible %>%
-  count_prop_ci(coi_statement)
+  count_prop_ci(coi_statement, ci_method = "sisonglaz")
+```
+
+## Table
+
+```{r}
+coi_table <- bind_rows(
+    coi_any_sum %>%
+      filter(coi_statement != "No") %>%
+      select(coi_statement, sample_id, report) %>%
+      pivot_wider(id_cols = coi_statement, names_from = sample_id, values_from = report),
+    coi_detail_sum %>%
+      filter(coi_statement %notin% c("No there is no conflict of interest statement", "UNCLEAR")) %>%
+      select(coi_statement, sample_id, report) %>%
+      pivot_wider(id_cols = coi_statement, names_from = sample_id, values_from = report)
+    ) %>%
+  mutate(coi_statement = factor(coi_statement, levels = 
+                                     c("Yes",
+                                       "YES the statement discloses at least one conflict of interest",
+                                       "YES the statement says that there were no conflicts of interest",
+                                       "Unclear",
+                                       "NO there is no conflict of interest statement"))) %>%
+  arrange(coi_statement)
+```
+```{r}
+knitr::kable(coi_table)
 ```
 
 # Plots
@@ -543,26 +881,25 @@ plot_data <- bind_rows(
     select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
   
   funding_any_sum %>%
-    filter(funding_statement_any == "Yes") %>%
+    filter(funding_statement == "Yes") %>%
     mutate(practice = "Funding",var = "funding_statement_any", type = "statement") %>%
     select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr),
   
   coi_any_sum %>%
-    filter(coi_statement_any == "Yes") %>%
+    filter(coi_statement == "Yes") %>%
     mutate(practice = "Conflict of interest",var = "coi_statement_any", type = "statement") %>%
     select(sample_id, practice, var, type, n, percent, ci_lwr, ci_upr)
 ) %>%
   mutate(N = 200,
-         sample_label = ifelse(sample_id == "Field", paste0("Field-wide\n2022"), paste0("Prominent\n2022")))
+         sample_label = ifelse(sample_id == "Field", paste0("Field\n2022"), paste0("Prominent\n2022")))
 ```
 ```{r}
 d_2015 <- read_csv(here('data','primary','d_Hardwicke2022.csv')) %>%
-  mutate(percent = round(n/N * 100, 0)) %>%
-  rowwise() %>%
   mutate(
-    ci_lwr = round(prop.test(n, N)$conf.int * 100, 0)[1],
-    ci_upr = round(prop.test(n, N)$conf.int * 100, 0)[2],
-    sample_label = paste0("Field-wide\n2014-2017")
+    percent = percent*100,
+    ci_lwr = ci_lwr*100,
+    ci_upr = ci_upr*100,
+    sample_label = paste0("Field\n2014-2017")
   )
 ```
 
@@ -583,13 +920,13 @@ plot_core <- plot_data %>%
         ymax = ci_upr),
       show.legend = F) +
     geom_text(
-             aes(label = paste0(round(percent,0),'%')),
+             aes(label = paste0(signif(percent,2),'%')),
              show.legend = FALSE,
              size = 6,
-             nudge_x = .2,
+             nudge_x = .275,
             colour = '#333333') +
     xlab('Sample') + 
-    ylab('Articles (%) with functionally availability') +
+    ylab('Articles (%) with functional availability') +
     scale_y_continuous(limits = c(0,30), breaks = seq(0,30,10)) +
     scale_fill_manual(values = "#7AD389") +
     labs(fill = NULL) + # hide legend title
@@ -614,7 +951,7 @@ plot_other <- plot_data %>%
         ymax = ci_upr),
       show.legend = F) +
       geom_text(
-             aes(label = paste0(round(percent,0),'%')),
+             aes(label = paste0(signif(percent,2),'%')),
              show.legend = FALSE,
              size = 6,
              nudge_x = .32,
@@ -633,5 +970,79 @@ library(cowplot)
 plot_grid(plot_core,plot_other, nrow = 2, rel_heights = c(1.5,1))
 ```
 
+# Abstract
 
+```{r}
+# prepare values for in-text reporting
+oa_field <- open_access_sum %>% 
+  filter(sample_id == "Field", open_access_status == "Yes") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
 
+oa_prom <- open_access_sum %>% 
+  filter(sample_id == "Prominent", open_access_status == "Yes") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+fund_field <- funding_any_sum %>% 
+  filter(sample_id == "Field", funding_statement == "Yes") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+fund_prom <- funding_any_sum %>% 
+  filter(sample_id == "Prominent", funding_statement == "Yes") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+coi_field <- coi_any_sum %>% 
+  filter(sample_id == "Field", coi_statement == "Yes") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+coi_prom <- coi_any_sum %>% 
+  filter(sample_id == "Prominent", coi_statement == "Yes") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+prereg_field <- prereg_functional_sum %>% 
+  filter(sample_id == "Field", prereg_statement == "YES the statement says that there is a preregistration", prereg_access_status == "YES") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+prereg_prom <- prereg_functional_sum %>% 
+  filter(sample_id == "Prominent", prereg_statement == "YES the statement says that there is a preregistration", prereg_access_status == "YES") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+materials_field <- materials_functional_sum %>% 
+  filter(sample_id == "Field", materials_statement == "YES the statement says that the materials are available", materials_access_status == "YES") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+materials_prom <- materials_functional_sum %>% 
+  filter(sample_id == "Prominent", materials_statement == "YES the statement says that the materials are available", materials_access_status == "YES") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+data_field <- data_functional_sum %>% 
+  filter(sample_id == "Field", data_statement == "YES the statement says that the data are available", data_access_status == "YES") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+data_prom <- data_functional_sum %>% 
+  filter(sample_id == "Prominent", data_statement == "YES the statement says that the data are available", data_access_status == "YES") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+analysis_field <- analysis_functional_sum %>% 
+  filter(sample_id == "Field", analysis_statement == "YES the statement says that the analysis scripts are available", analysis_access_status == "YES") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+
+analysis_prom <- analysis_functional_sum %>% 
+  filter(sample_id == "Prominent", analysis_statement == "YES the statement says that the analysis scripts are available", analysis_access_status == "YES") %>% 
+  mutate(abs_report = paste0(signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%]')) %>%
+  pull(abs_report)
+```
+
+Over a decade of advocacy and policy reforms have attempted to increase the uptake of transparent research practices in the field of psychology; however, their collective impact is unclear. We estimated the prevalence of transparent research practices in (a) all psychology journals (i.e., field-wide); and (b) prominent psychology journals, by manually examining two random samples of 200 empirical articles (N = 400) published in 2022. Most articles had an open access version (field-wide: `r oa_field`; prominent: `r oa_prom`) and included a funding statement (field-wide: `r fund_field`; prominent: `r fund_prom`); or conflict of interest statement (field-wide: `r coi_field`; prominent: `r coi_prom`). Relatively few articles had a preregistration (field-wide: `r prereg_field`; prominent: `r prereg_prom`); materials (field-wide: `r materials_field`; prominent: `r materials_prom`); raw/primary data (field-wide: `r data_field`; prominent: `r data_prom`); or analysis scripts (field-wide: `r analysis_field`; prominent: `r analysis_prom`) that were immediately accessible without contacting authors or third parties. In conjunction with prior research (Hardwicke et al., 2022), our results suggest transparency increased moderately from 2017 to 2022. Overall, despite considerable infrastructure improvements, bottom-up advocacy, and top-down policy initiatives, transparency continues to be widely neglected in psychology.
