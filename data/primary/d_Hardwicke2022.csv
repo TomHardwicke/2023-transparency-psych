@@ -1,16 +1,16 @@
-sample_id,practice,var,type,n,N
-Field 2014-2017,Preregistration,prereg_statement,statement,5,188
-Field 2014-2017,Preregistration,prereg_functional,functional,4,188
-Field 2014-2017,Materials,materials_statement,statement,26,183
-Field 2014-2017,Materials,materials_functional,functional,19,183
-Field 2014-2017,Data,data_statement,statement,4,188
-Field 2014-2017,Data,data_functional,functional,3,188
-Field 2014-2017,Analysis scripts,analysis_statement,statement,1,188
-Field 2014-2017,Analysis scripts,analysis_functional,functional,1,188
-Field 2014-2017,Funding,funding_disclosed,disclosed,124,228
-Field 2014-2017,Funding,funding_none,explicit none,18,228
-Field 2014-2017,Funding,funding_statement_any,statement,142,228
-Field 2014-2017,Conflict of interest,coi_disclosed,disclosed,12,228
-Field 2014-2017,Conflict of interest,coi_none,explicit none,76,228
-Field 2014-2017,Conflict of interest,coi_statement_any,statement,88,228
-Field 2014-2017,Open access,open_access_statement,statement,154,237
+sample_id,practice,var,type,n,N,percent,ci_lwr,ci_upr
+Field 2014-2017,Preregistration,prereg_statement,statement,5,188,0.02659574,0.0106383,0.04968105
+Field 2014-2017,Preregistration,prereg_functional,functional,4,188,0.021276596,0.005319149,0.04372457
+Field 2014-2017,Materials,materials_statement,statement,26,183,0.1420765,0.09836066,0.1939029
+Field 2014-2017,Materials,materials_functional,functional,19,183,0.10382514,0.06010929,0.15351326
+Field 2014-2017,Data,data_statement,statement,4,188,0.0212766,0.005319149,0.03943714
+Field 2014-2017,Data,data_functional,functional,3,188,0.015957447,0,0.03314898
+Field 2014-2017,Analysis scripts,analysis_statement,statement,1,188,0.005319149,0,0.01430492
+Field 2014-2017,Analysis scripts,analysis_functional,functional,1,188,0.005319149,0,0.01430492
+Field 2014-2017,Funding,funding_disclosed,disclosed,124,228,0.54385965,0.47807018,0.6114445
+Field 2014-2017,Funding,funding_none,explicit none,18,228,0.07894737,0.01315789,0.1493846
+Field 2014-2017,Funding,funding_statement_any,statement,142,228,0.622807,0.5614035,0.6892671
+Field 2014-2017,Conflict of interest,coi_disclosed,disclosed,12,228,0.05263158,0,0.1196183
+Field 2014-2017,Conflict of interest,coi_none,explicit none,76,228,0.33333333,0.2719298,0.4003201
+Field 2014-2017,Conflict of interest,coi_statement_any,statement,88,228,0.3859649,0.3245614,0.4531392
+Field 2014-2017,Open access,open_access_statement,statement,154,237,0.64978903,0.5907173,0.713277
