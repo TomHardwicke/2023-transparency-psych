@@ -17,18 +17,6 @@ library(DescTools)
 ```{r}
 count_prop_ci <- function(data, ..., ci_method) {
   columns <- enquos(...)
-  
-  #old wilson method
-    # data %>%
-    #   count(sample_id, !!!columns, .drop = FALSE) %>%
-    #   group_by(sample_id) %>%
-    #   mutate(N = sum(n),
-    #          percent = round(n/N * 100, 0)) %>%
-    #   rowwise() %>%
-    #   mutate(
-    #     ci_lwr = round(prop.test(n, N)$conf.int * 100, 0)[1],
-    #     ci_upr = round(prop.test(n, N)$conf.int * 100, 0)[2],
-    #     values = paste0(n, '/', N, ' (', percent, '% [', ci_lwr, '%-', ci_upr, '%])')
 
   data_field <- data %>%
       filter(sample_id == "Field") %>%
@@ -56,6 +44,7 @@ count_prop_ci <- function(data, ..., ci_method) {
 ```
 
 # Load plot theme
+
 ```{r}
 theme_custom <- function () { 
   theme_grey(base_size = 20, base_family = "sans") %+replace% 
@@ -157,7 +146,8 @@ d <- d %>%
     notes = `You can use this space to record anything interesting or problematic about this article`)
 ```
 
-# fix an encoding issue
+# Fix an encoding issue
+
 ```{r}
 # there seems to be some encoding problem created by the use of em dashes so let's remove them
 
@@ -367,37 +357,57 @@ d <- d %>%
   rename_with(~ str_remove(., "_agreed"), ends_with("_agreed")) # remove the word agreed from the column name for more efficient coding
 ```
 
-# Eligibility
+# Results
 
-How many articles couldn't be accessed at all?
-```{r}
-d %>% filter(open_access_status == "No I cannot access any version of the article") %>% nrow()
-d %>% filter(open_access_status == "One coder cannot access any version of the article")
-```
+## Included articles
 
 ```{r}
-d %>% 
+
+field_total <- d %>% filter(sample_id == "Field") %>% nrow()
+prom_total <- d %>% filter(sample_id == "Prominent") %>% nrow()
+
+field_no_access <- d %>% 
+  filter(open_access_status %in% c("No I cannot access any version of the article", "One coder cannot access any version of the article")) %>%
+  count(sample_id) %>%
+  pull(n)
+
+not_empirical <- d %>% 
   filter(open_access_status %notin% c("No I cannot access any version of the article", "One coder cannot access any version of the article")) %>% # for articles we could access
   filter(eligible_empirical == "No") %>%
   count(sample_id)
+
+field_not_empirical <- not_empirical %>% filter(sample_id == "Field") %>% pull(n)
+prom_not_empirical <- not_empirical %>% filter(sample_id == "Prominent") %>% pull(n)
 
 d_eligible <- d %>% 
   filter(open_access_status %notin% c("No I cannot access any version of the article", "One coder cannot access any version of the article")) %>% # for articles we could access
   filter(eligible_empirical == "Yes")
 ```
 
-# Research design
-
 ```{r}
-research_design_sum <- d_eligible %>% count(sample_id, research_design)
+research_design_field <- d_eligible %>% filter(sample_id == "Field") %>% count(sample_id, research_design) 
+research_design_prom <- d_eligible %>% filter(sample_id == "Prominent") %>% count(sample_id, research_design) 
+
 ```
 
-# Open access
+### Field-wide sample
+In total, we examined `r field_total` articles from the field-wide list. `r field_no_access` articles were excluded because at least one coder could not access any version of them. `r field_not_empirical` additional articles were excluded because they were not empirical. `r field_total-field_no_access-field_not_empirical` eligible articles remained. Articles were classified as non-experimental (n = `r research_design_field %>% filter(research_design == "Non-experimental") %>% pull(n)`), experimental (n = `r research_design_field %>% filter(research_design == "Experimental") %>% pull(n)`), experimental and non-experimental (n = `r research_design_field %>% filter(research_design == "Experimental, Non-experimental") %>% pull(n)`), and meta-analysis (n = `r research_design_field %>% filter(research_design == "Meta-analysis") %>% pull(n)`). 
+
+### Prominent sample
+In total, we examined `r prom_total` articles from the prominent list. All articles could be accessed. `r prom_not_empirical` articles were excluded because they were not empirical. `r prom_total-prom_not_empirical` eligible articles remained. Articles were classified as non-experimental (n = `r research_design_prom %>% filter(research_design == "Non-experimental") %>% pull(n)`), experimental (n = `r research_design_prom %>% filter(research_design == "Experimental") %>% pull(n)`), experimental and non-experimental (n = `r research_design_prom %>% filter(research_design == "Experimental, Non-experimental") %>% pull(n)`), and meta-analysis (n = `r research_design_prom %>% filter(research_design == "Meta-analysis") %>% pull(n)`).
+
+## Open access
 
 ```{r}
 open_access_sum <- d_eligible %>%
   count_prop_ci(open_access_status, ci_method = "wilson")
 ```
+
+### Field-wide sample
+We identified an open access version for `r open_access_sum %>% filter(sample_id == "Field", open_access_status == "Yes") %>% pull(report)` articles (Figure 1). The remaining `r open_access_sum %>% filter(sample_id == "Field", open_access_status != "Yes") %>% pull(report)` articles were only accessible through a paywall.
+
+### Prominent sample
+We identified an open access version for `r open_access_sum %>% filter(sample_id == "Prominent", open_access_status == "Yes") %>% pull(report)` articles (Figure 1). The remaining `r open_access_sum %>% filter(sample_id == "Prominent", open_access_status != "Yes") %>% pull(report)` articles were only accessible through a paywall.
 
 # Preregistration
 
