@@ -1,0 +1,83 @@
+*Data codebook*
+
+Project title: Prevalence of transparent research practices in psychology: A cross-sectional study of empirical articles published in 2022
+
+This codebook documents the d_with_disagreements_resolved.csv dataset.
+
+Description: Information about articles was extracted and classified by two independent coders and any disagreements were resolved by a third coder. The final agreed upon coding is in the columns appended with "_agreed". The dataset has one row per article. More details about the measured variables are available in Supplementary Table B1 of the manuscript.
+
+Source: The information was initially recorded using a Google Form. Disagreements were resolved manually in a spreadsheet by the third coder.
+
+Columns:
+
+When a column is appended with _primary or _secondary, this refers to the primary/secondary coder.
+When a column is appended with _match, this refers to whether the primary and secondary coder agreed (TRUE) or not (FALSE).
+When a column is appended with _agreed, this refers to the final agreed coding. This is the same as the primary or secondary coding if those two coders were in agreement. Otherwise, it is the coding assigned by a third coder who resolved coding differences. 
+
+article_id = a unique numeric identifier for each article
+sample_id = whether the article was in the Field (N= 200) or Prominent (N = 200) sample	
+coder_id_primary = initials of the coder	
+coder_id_secondary = initials of the coder
+article_version_coded_primary = which version of the article was examined
+article_version_coded_secondary	= which version of the article was examined
+open_access_status_primary = whether any open access version of the article could be identified ("Yes")
+open_access_status_secondary = whether any open access version of the article could be identified ("Yes")
+eligible_empirical_primary = whether the article reports empirical data
+eligible_empirical_secondary = whether the article reports empirical data
+research_design_primary	= whether the research design is experimental, non-experimental, or a meta-analysis (multiple options can be selected)
+research_design_secondary = whether the research design is experimental, non-experimental, or a meta-analysis (multiple options can be selected)
+prereg_statement_primary = whether the article states that the research (or some aspect of the research) was preregistered	
+prereg_statement_secondary = whether the article states that the research (or some aspect of the research) was preregistered
+prereg_statement_verbatim_primary = a verbatim copy of the preregistration statement	
+prereg_statement_verbatim_secondary = a verbatim copy of the preregistration statement	 
+prereg_access_method_primary = how the preregistration is accessed (according to the statement)
+prereg_access_method_secondary = how the preregistration is accessed (according to the statement)
+prereg_access_status_primary = whether the preregistration could be accessed and viewed (without contacting anyone)
+prereg_access_status_secondary = whether the preregistration could be accessed and viewed (without contacting anyone)
+prereg_identify_method_primary = how the statement was identified (by keyword search or manual search)	
+prereg_identify_method_secondary = how the statement was identified (by keyword search or manual search)	
+data_statement_primary = whether the article states that data are available or not
+data_statement_secondary = whether the article states that data are available or not
+data_statement_verbatim_primary	= a verbatim copy of the data availability statement	
+data_statement_verbatim_secondary = a verbatim copy of the data availability statement
+data_access_method_primary = how data are accessed (according to the statement)	
+data_access_method_secondary = how data are accessed (according to the statement)	
+data_access_status_primary = whether data could be accessed, downloaded, and viewed (without contacting anyone)	
+data_access_status_secondary = whether data could be accessed, downloaded, and viewed (without contacting anyone)		
+data_identify_method_primary = how the statement was identified (by keyword search or manual search)	
+data_identify_method_secondary = how the statement was identified (by keyword search or manual search)	
+materials_statement_primary = whether the article states that materials are available or not	
+materials_statement_secondary = whether the article states that materials are available or not	
+materials_statement_verbatim_primary = a verbatim copy of the materials availability statement	
+materials_statement_verbatim_secondary = a verbatim copy of the materials availability statement	
+materials_access_method_primary	= how the materials are accessed (according to the statement)
+materials_access_method_secondary = how the materials are accessed (according to the statement)	
+materials_access_status_primary	= whether materials could be accessed, downloaded, and viewed (without contacting anyone)	
+materials_access_status_secondary = whether materials could be accessed, downloaded, and viewed (without contacting anyone)	
+materials_identify_method_primary = how the statement was identified (by keyword search or manual search)	
+materials_identify_method_secondary = how the statement was identified (by keyword search or manual search)	
+analysis_statement_primary = whether the article states that analysis scripts are available or not	
+analysis_statement_secondary = whether the article states that analysis scripts are available or not	
+analysis_statement_verbatim_primary = a verbatim copy of the analysis script availability statement		
+analysis_statement_verbatim_secondary = a verbatim copy of the analysis script availability statement	
+analysis_access_method_primary = how the analysis scripts are accessed (according to the statement)	
+analysis_access_method_secondary = how the analysis scripts are accessed (according to the statement)	
+analysis_access_status_primary = whether analysis scripts could be accessed, downloaded, and viewed (without contacting anyone)	
+analysis_access_status_secondary = whether analysis scripts could be accessed, downloaded, and viewed (without contacting anyone)		
+analysis_identify_method_primary = how the statement was identified (by keyword search or manual search)	
+analysis_identify_method_secondary = how the statement was identified (by keyword search or manual search)
+funding_statement_primary = whether the article includes a funding statement or not, and whether there were / were not funding sources
+funding_statement_secondary = whether the article includes a funding statement or not, and whether there were / were not funding sources	
+funding_statement_verbatim_primary = a verbatim copy of the funding statement	
+funding_statement_verbatim_secondary = a verbatim copy of the funding statement		
+funding_identify_method_primary	= how the statement was identified (by keyword search or manual search)
+funding_identify_method_secondary = how the statement was identified (by keyword search or manual search)
+coi_statement_primary = whether the article includes a conflict of interest statement or not, and whether there were / were not potential conflicts according to the statement
+coi_statement_secondary	= whether the article includes a conflict of interest statement or not, and whether there were / were not potential conflicts according to the statement 
+coi_statement_verbatim_primary = a verbatim copy of the conflict of interest statement	
+coi_statement_verbatim_secondary = a verbatim copy of the conflict of interest statement	
+coi_identify_method_primary = how the statement was identified (by keyword search or manual search)	
+coi_identify_method_secondary = how the statement was identified (by keyword search or manual search)
+
+
+
