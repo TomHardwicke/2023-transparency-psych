@@ -3,6 +3,8 @@ title: "Analysis"
 format: html
 ---
 
+The R code below reproduces the analyses reported in Hardwicke et al. (2024) "Prevalence of transparent research practices in psychology: A cross-sectional study of empirical articles published in 2022".
+
 # Load packages
 
 ```{r}
@@ -12,38 +14,9 @@ library(here)
 library(DescTools)
 ```
 
-# Define summary function
-
-```{r}
-count_prop_ci <- function(data, ..., ci_method) {
-  columns <- enquos(...)
-
-  data_field <- data %>%
-      filter(sample_id == "Field") %>%
-      count(!!!columns, .drop = FALSE) 
-  
-  data_field <- data_field %>%
-      cbind(MultinomCI(data_field$n, conf.level = 0.95, sides = "two.sided", method=ci_method)) %>%
-      mutate(sample_id = "Field", N = sum(n))
-    
-  data_prom <- data %>%
-      filter(sample_id == "Prominent") %>%
-      count(!!!columns, .drop = FALSE) 
-  
-  data_prom <- data_prom %>%
-      cbind(MultinomCI(data_prom$n, conf.level = 0.95, sides = "two.sided", method=ci_method)) %>%
-      mutate(sample_id = "Prominent", N = sum(n))
-  
-  data_all <- bind_rows(data_field, data_prom) %>%
-    select(sample_id, !!!columns, n, N, percent = est, ci_lwr = lwr.ci, ci_upr = upr.ci) %>%
-    mutate(percent = percent*100, ci_lwr = ci_lwr*100, ci_upr = ci_upr*100, 
-           report = paste0(n,' (',signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%])'))
-  
-  return(data_all)
-}
-```
-
 # Load plot theme
+
+A theme to be used for plots.
 
 ```{r}
 theme_custom <- function () { 
@@ -82,15 +55,36 @@ theme_custom <- function () {
 # Load custom functions
 
 ```{r}
-# define a "not in" operator
+# Define a "not in" operator
 `%notin%` <- Negate(`%in%`)
 
-# function to calculate 95% Wilson CIs on single proportions (using prop.test) then output them in a string with a point estimate as percentages
-percentCI <- function(successes, total) {
-  percent <- round((successes/total)*100,1)
-  CI <- round(prop.test(successes,total)$conf.int*100, 1)
-  CIstring <- paste0(percent,'%, CI [', CI[1], ',', CI[2], ']')
-  return(CIstring)
+# This function will compute percentages and confidence intervals for specific variables and format them.
+
+count_prop_ci <- function(data, ..., ci_method) {
+  columns <- enquos(...)
+
+  data_field <- data %>%
+      filter(sample_id == "Field") %>%
+      count(!!!columns, .drop = FALSE) 
+  
+  data_field <- data_field %>%
+      cbind(MultinomCI(data_field$n, conf.level = 0.95, sides = "two.sided", method=ci_method)) %>%
+      mutate(sample_id = "Field", N = sum(n))
+    
+  data_prom <- data %>%
+      filter(sample_id == "Prominent") %>%
+      count(!!!columns, .drop = FALSE) 
+  
+  data_prom <- data_prom %>%
+      cbind(MultinomCI(data_prom$n, conf.level = 0.95, sides = "two.sided", method=ci_method)) %>%
+      mutate(sample_id = "Prominent", N = sum(n))
+  
+  data_all <- bind_rows(data_field, data_prom) %>%
+    select(sample_id, !!!columns, n, N, percent = est, ci_lwr = lwr.ci, ci_upr = upr.ci) %>%
+    mutate(percent = percent*100, ci_lwr = ci_lwr*100, ci_upr = ci_upr*100, 
+           report = paste0(n,' (',signif(percent,2),'% [',signif(ci_lwr,2),'%-',signif(ci_upr,2),'%])'))
+  
+  return(data_all)
 }
 ```
 
@@ -106,6 +100,8 @@ d_prominent_list <- read_csv(here('data','raw','prominent-list - prominent-list.
 ```
 
 # Rename columns
+
+We'll rename the columns so its easier to refer to them in this script.
 
 ```{r}
 d <- d %>%
@@ -314,7 +310,7 @@ d_wide_disagreements <- d_wide %>%
 write_csv(d_wide_disagreements, here('data','primary','d_with_disagreements.csv'))
 
 # load in dataframe with disagreements resolved manually, 
-d <- read_csv(here('data','primary','d_with_disagreements_resolved.csv'))
+d <- read_csv(here('data','processed','d_with_disagreements_resolved.csv'))
 ```
 
 ```{r}
@@ -1148,6 +1144,3 @@ ci_coi <- bind_rows(
   arrange(sample, statement, method)
 
 bind_rows(ci_prereg, ci_materials, ci_data, ci_analysis, ci_funding, ci_coi) %>%
-  knitr::kable(digits = 1)
-```
-
