@@ -1,6 +1,7 @@
 # folders to ignore
 misc/
 analysis/archive/
+analysis/figs/
 dissemination/
 
 # History files
