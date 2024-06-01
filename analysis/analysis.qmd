@@ -1153,3 +1153,12 @@ ci_coi <- bind_rows(
 bind_rows(ci_prereg, ci_materials, ci_data, ci_analysis, ci_funding, ci_coi) %>%
   kable()
 ```
+
+# Session Info
+
+Information about the software environment used to run the analyses reported in this script.
+
+```{r}
+sessionInfo()
+```
+
