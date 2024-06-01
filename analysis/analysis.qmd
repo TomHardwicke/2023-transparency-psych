@@ -1,6 +1,9 @@
 ---
 title: "Analysis"
 format: html
+execute: 
+  warning: false
+  message: false
 ---
 
 The R code below reproduces the analyses reported in Hardwicke et al. (2024) "Prevalence of transparent research practices in psychology: A cross-sectional study of empirical articles published in 2022".
@@ -12,6 +15,8 @@ library(tidyverse)
 library(here)
 # library(tidylog) for coding feedback during development only
 library(DescTools)
+library(cowplot)
+library(knitr)
 ```
 
 # Load plot theme
@@ -241,6 +246,7 @@ for (i in seq_along(column_names)) {
     mutate(!!paste0(this_colname, "_agreed") := if_else(!!sym(paste0(this_colname, "_match")) == T, !!sym(paste0(this_colname, "_primary")), '?'))
 }
 
+# select columns were interested in and put them in a useful order.
 d_wide <- d_wide %>% 
   select("article_id", "sample_id", 
   "coder_id_primary", "coder_id_secondary", 
@@ -267,8 +273,11 @@ d_wide <- d_wide %>%
   ))
 
 # second, let's find the cases where the primary and secondary coders did not agree on whether an article was empirical (and therefore eligible)
-# NOT RUN d_wide %>% 
+
+# NOT RUN 
+# d_wide %>% 
 #   filter(eligible_empirical_primary != eligible_empirical_secondary)
+
 # TEH will now check each of these manually and decide on the agreed upon classification, which will be added below.
 
 d_wide <- d_wide %>%
@@ -287,6 +296,7 @@ d_wide <- d_wide %>%
   ))
 
 # check how many eligible articles in each sample (should be 200)
+# NOT RUN 
 # d_wide %>% 
 #   filter(eligible_empirical_agreed == "Yes") %>% count(sample_id)
 
@@ -309,35 +319,26 @@ d_wide_disagreements <- d_wide %>%
 # output dataframe with disagreements to be resolved manually
 write_csv(d_wide_disagreements, here('data','primary','d_with_disagreements.csv'))
 
+# disagreements were resolved manually at this stage (i.e., by directly adding information to the csv file).
+
 # load in dataframe with disagreements resolved manually, 
 d <- read_csv(here('data','processed','d_with_disagreements_resolved.csv'))
 ```
 
 ```{r}
 # calculate inter-rater agreement for statement variables
+
 # prereg
 prereg_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(prereg_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(prereg_statement_match == T) %>% pull(percent)
 
 # materials
 materials_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(materials_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(materials_statement_match == T) %>% pull(percent)
 
-d_wide_disagreements %>% 
-  filter(eligible_empirical_agreed == "Yes", materials_statement_match == F) %>%
-  count(materials_statement_primary, materials_statement_secondary)
-
 # data
 data_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(data_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(data_statement_match == T) %>% pull(percent)
 
-d_wide_disagreements %>% 
-  filter(eligible_empirical_agreed == "Yes", data_statement_match == F) %>%
-  count(data_statement_primary, data_statement_secondary)
-
 # analysis scripts
 analysis_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(analysis_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(analysis_statement_match == T) %>% pull(percent)
-
-d_wide_disagreements %>% 
-  filter(eligible_empirical_agreed == "Yes", analysis_statement_match == F) %>%
-  count(analysis_statement_primary, analysis_statement_secondary)
 
 # coi
 coi_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes") %>% count(coi_statement_match) %>% mutate(percent = (n/400)*100) %>% filter(coi_statement_match == T) %>% pull(percent)
@@ -347,13 +348,15 @@ funding_ira <- d_wide_disagreements %>% filter(eligible_empirical_agreed == "Yes
 ```
 
 ```{r}
-# select only agreed upon coding
+# select only agreed upon coding to use in the main analyses
 d <- d %>% 
   select(article_id, sample_id, open_access_status_agreed, eligible_empirical_agreed, research_design_agreed, prereg_statement_verbatim_primary, prereg_statement_agreed, prereg_access_method_agreed, prereg_access_status_agreed, prereg_access_detail, data_statement_verbatim_primary, data_statement_agreed, data_reason, data_access_method_agreed, data_access_status_agreed, data_access_detail, materials_statement_verbatim_primary, materials_statement_agreed, materials_reason, materials_access_method_agreed, materials_access_status_agreed, materials_access_detail, analysis_statement_verbatim_primary, analysis_statement_agreed, analysis_reason, analysis_access_method_agreed, analysis_access_status_agreed, analysis_access_detail, funding_statement_verbatim_primary, funding_statement_agreed, coi_statement_verbatim_primary, coi_statement_agreed) %>% 
   rename_with(~ str_remove(., "_agreed"), ends_with("_agreed")) # remove the word agreed from the column name for more efficient coding
 ```
 
 # Results
+
+This section of code should reproduce the results reported in the manuscript.
 
 ## Included articles
 
@@ -383,7 +386,6 @@ d_eligible <- d %>%
 ```{r}
 research_design_field <- d_eligible %>% filter(sample_id == "Field") %>% count(sample_id, research_design) 
 research_design_prom <- d_eligible %>% filter(sample_id == "Prominent") %>% count(sample_id, research_design) 
-
 ```
 
 ### Field-wide sample
@@ -421,12 +423,14 @@ Occasionally a statement said there was a preregistration but we could not acces
 prereg_functional_sum <- d_eligible %>%
   count_prop_ci(prereg_statement, prereg_access_status, ci_method = "sisonglaz")
 ```
+
 ## Access method
 ```{r}
 prereg_access_sum <- d_eligible %>%
   filter(prereg_statement == "YES the statement says that there is a preregistration", prereg_access_status == "YES") %>%
   count(sample_id, prereg_access_method, .drop = F)
 ```
+
 ## Access failures
 ```{r}
 prereg_access_detail_sum <- d_eligible %>%
@@ -478,9 +482,8 @@ prereg_table <- bind_rows(
 ```
 
 ```{r}
-knitr::kable(prereg_table)
+kable(prereg_table)
 ```
-
 
 # Materials
 
@@ -505,6 +508,7 @@ materials_access_sum <-d_eligible %>%
   filter(materials_statement == "YES the statement says that the materials are available", materials_access_status == "YES") %>%
   count(sample_id, materials_statement, materials_access_status, materials_access_method, .drop = F)
 ```
+
 ## Access failures
 ```{r}
 materials_access_detail_sum <- d_eligible %>%
@@ -570,7 +574,7 @@ materials_table <- bind_rows(
 ```
 
 ```{r}
-knitr::kable(materials_table)
+kable(materials_table)
 ```
 
 # Data
@@ -661,7 +665,7 @@ data_table <- bind_rows(
 ```
 
 ```{r}
-knitr::kable(data_table)
+kable(data_table)
 ```
 
 # Analysis script availability
@@ -753,7 +757,7 @@ analysis_table <- bind_rows(
 ```
 
 ```{r}
-knitr::kable(analysis_table)
+kable(analysis_table)
 ```
 
 # Funding disclosures
@@ -794,7 +798,7 @@ funding_table <- bind_rows(
 ```
 
 ```{r}
-knitr::kable(funding_table)
+kable(funding_table)
 ```
 
 # Conflict of interest disclosures
@@ -835,7 +839,7 @@ coi_table <- bind_rows(
 ```
 
 ```{r}
-knitr::kable(coi_table)
+kable(coi_table)
 ```
 
 # Plots
@@ -973,8 +977,9 @@ plot_other <- plot_data %>%
     theme(panel.background = element_rect(fill = "ivory"))
 ```
 
+This is Figure One of the manuscript.
+
 ```{r fig_one, fig.path = "figs/", fig.width = unit(11.5,"cm"), fig.height = unit(14,"cm")}
-library(cowplot)
 plot_grid(plot_core,plot_other, nrow = 2, rel_heights = c(1.5,1))
 ```
 
@@ -1056,6 +1061,8 @@ analysis_prom <- analysis_functional_sum %>%
 Over a decade of advocacy and policy reforms have attempted to increase the uptake of transparent research practices in the field of psychology; however, their collective impact is unclear. We estimated the prevalence of transparent research practices in (a) all psychology journals (i.e., field-wide); and (b) prominent psychology journals, by manually examining two random samples of 200 empirical articles (N = 400) published in 2022. Most articles had an open access version (field-wide: `r oa_field`; prominent: `r oa_prom`) and included a funding statement (field-wide: `r fund_field`; prominent: `r fund_prom`); or conflict of interest statement (field-wide: `r coi_field`; prominent: `r coi_prom`). Relatively few articles had a preregistration (field-wide: `r prereg_field`; prominent: `r prereg_prom`); materials (field-wide: `r materials_field`; prominent: `r materials_prom`); raw/primary data (field-wide: `r data_field`; prominent: `r data_prom`); or analysis scripts (field-wide: `r analysis_field`; prominent: `r analysis_prom`) that were immediately accessible without contacting authors or third parties. In conjunction with prior research (Hardwicke et al., 2022), our results suggest transparency increased moderately from 2017 to 2022. Overall, despite considerable infrastructure improvements, bottom-up advocacy, and top-down policy initiatives, transparency continues to be widely neglected in psychology.
 
 # Confidence interval comparison
+
+A comparison of confidence intervals calucalted using the Wilson method and the Sison-Glaz method for reporting in Supplementary Table A2.
 
 ```{r}
 
@@ -1144,3 +1151,5 @@ ci_coi <- bind_rows(
   arrange(sample, statement, method)
 
 bind_rows(ci_prereg, ci_materials, ci_data, ci_analysis, ci_funding, ci_coi) %>%
+  kable()
+```
