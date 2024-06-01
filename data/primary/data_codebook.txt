@@ -2,17 +2,17 @@
 
 Project title: Prevalence of transparent research practices in psychology: A cross-sectional study of empirical articles published in 2022
 
-This codebook documents the d_with_disagreements_resolved.csv dataset.
+This codebook documents the d_with_disagreements.csv dataset.
 
 Description: Information about articles was extracted and classified by two independent coders and any disagreements were resolved by a third coder. The final agreed upon coding is in the columns appended with "_agreed". The dataset has one row per article. More details about the measured variables are available in Supplementary Table B1 of the manuscript.
 
-Source: The information was initially recorded using a Google Form. Disagreements were resolved manually in a spreadsheet by the third coder.
+Source: The information was recorded using a Google Form.
 
 Columns:
 
 When a column is appended with _primary or _secondary, this refers to the primary/secondary coder.
 When a column is appended with _match, this refers to whether the primary and secondary coder agreed (TRUE) or not (FALSE).
-When a column is appended with _agreed, this refers to the final agreed coding. This is the same as the primary or secondary coding if those two coders were in agreement. Otherwise, it is the coding assigned by a third coder who resolved coding differences. 
+When a column is appended with _agreed, this refers to the final agreed coding. This is the same as the primary or secondary coding if those two coders were in agreement. Otherwise, it is a question mark, because the coding differences have not yet been resolved (see "d_with_disagreements_resolved".csv" in the "processed" folder.
 
 article_id = a unique numeric identifier for each article
 sample_id = whether the article was in the Field (N= 200) or Prominent (N = 200) sample	
