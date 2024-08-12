@@ -262,7 +262,7 @@ d_wide <- d_wide %>%
   "coi_statement_primary", "coi_statement_secondary", "coi_statement_verbatim_primary", "coi_statement_verbatim_secondary", "coi_statement_match", "coi_statement_agreed", "coi_identify_method_primary", "coi_identify_method_secondary", "notes_primary", "notes_secondary")
 ```
 
-# Resolve coding differences 
+# Resolve coding differences
 
 ```{r}
 # firstly, if one coder found an open access version, that's sufficient to make that the agreed classification, so let's do that first:
@@ -389,9 +389,11 @@ research_design_prom <- d_eligible %>% filter(sample_id == "Prominent") %>% coun
 ```
 
 ### Field-wide sample
-In total, we examined `r field_total` articles from the field-wide list. `r field_no_access` articles were excluded because at least one coder could not access any version of them. `r field_not_empirical` additional articles were excluded because they were not empirical. `r field_total-field_no_access-field_not_empirical` eligible articles remained. Articles were classified as non-experimental (n = `r research_design_field %>% filter(research_design == "Non-experimental") %>% pull(n)`), experimental (n = `r research_design_field %>% filter(research_design == "Experimental") %>% pull(n)`), experimental and non-experimental (n = `r research_design_field %>% filter(research_design == "Experimental, Non-experimental") %>% pull(n)`), and meta-analysis (n = `r research_design_field %>% filter(research_design == "Meta-analysis") %>% pull(n)`). 
+
+In total, we examined `r field_total` articles from the field-wide list. `r field_no_access` articles were excluded because at least one coder could not access any version of them. `r field_not_empirical` additional articles were excluded because they were not empirical. `r field_total-field_no_access-field_not_empirical` eligible articles remained. Articles were classified as non-experimental (n = `r research_design_field %>% filter(research_design == "Non-experimental") %>% pull(n)`), experimental (n = `r research_design_field %>% filter(research_design == "Experimental") %>% pull(n)`), experimental and non-experimental (n = `r research_design_field %>% filter(research_design == "Experimental, Non-experimental") %>% pull(n)`), and meta-analysis (n = `r research_design_field %>% filter(research_design == "Meta-analysis") %>% pull(n)`).
 
 ### Prominent sample
+
 In total, we examined `r prom_total` articles from the prominent list. All articles could be accessed. `r prom_not_empirical` articles were excluded because they were not empirical. `r prom_total-prom_not_empirical` eligible articles remained. Articles were classified as non-experimental (n = `r research_design_prom %>% filter(research_design == "Non-experimental") %>% pull(n)`), experimental (n = `r research_design_prom %>% filter(research_design == "Experimental") %>% pull(n)`), experimental and non-experimental (n = `r research_design_prom %>% filter(research_design == "Experimental, Non-experimental") %>% pull(n)`), and meta-analysis (n = `r research_design_prom %>% filter(research_design == "Meta-analysis") %>% pull(n)`).
 
 ## Open access
@@ -402,14 +404,17 @@ open_access_sum <- d_eligible %>%
 ```
 
 ### Field-wide sample
+
 We identified an open access version for `r open_access_sum %>% filter(sample_id == "Field", open_access_status == "Yes") %>% pull(report)` articles (Figure 1). The remaining `r open_access_sum %>% filter(sample_id == "Field", open_access_status != "Yes") %>% pull(report)` articles were only accessible through a paywall.
 
 ### Prominent sample
+
 We identified an open access version for `r open_access_sum %>% filter(sample_id == "Prominent", open_access_status == "Yes") %>% pull(report)` articles (Figure 1). The remaining `r open_access_sum %>% filter(sample_id == "Prominent", open_access_status != "Yes") %>% pull(report)` articles were only accessible through a paywall.
 
 # Preregistration
 
 ## Statement
+
 ```{r}
 prereg_statement_sum <- d_eligible %>%
   count_prop_ci(prereg_statement, ci_method = "sisonglaz")
@@ -425,6 +430,7 @@ prereg_functional_sum <- d_eligible %>%
 ```
 
 ## Access method
+
 ```{r}
 prereg_access_sum <- d_eligible %>%
   filter(prereg_statement == "YES the statement says that there is a preregistration", prereg_access_status == "YES") %>%
@@ -432,6 +438,7 @@ prereg_access_sum <- d_eligible %>%
 ```
 
 ## Access failures
+
 ```{r}
 prereg_access_detail_sum <- d_eligible %>%
   filter(prereg_access_status == "NO") %>%
@@ -439,6 +446,9 @@ prereg_access_detail_sum <- d_eligible %>%
 ```
 
 ## Table
+
+This is Table 1 of the manuscript.
+
 ```{r}
 prereg_table <- bind_rows(
   prereg_statement_sum %>%
@@ -488,6 +498,7 @@ kable(prereg_table)
 # Materials
 
 ## Statement
+
 ```{r}
 materials_statement_sum <- d_eligible %>%
   count_prop_ci(materials_statement, ci_method = "sisonglaz")
@@ -503,6 +514,7 @@ materials_functional_sum <- d_eligible %>%
 ```
 
 ## Access method
+
 ```{r}
 materials_access_sum <-d_eligible %>%
   filter(materials_statement == "YES the statement says that the materials are available", materials_access_status == "YES") %>%
@@ -510,6 +522,7 @@ materials_access_sum <-d_eligible %>%
 ```
 
 ## Access failures
+
 ```{r}
 materials_access_detail_sum <- d_eligible %>%
   filter(materials_access_status == "NO") %>%
@@ -517,6 +530,7 @@ materials_access_detail_sum <- d_eligible %>%
 ```
 
 ## Reasons for not sharing
+
 ```{r}
 materials_reasons_sum <- d_eligible %>%
   filter(materials_statement == "YES the statement says that the materials are not available") %>%
@@ -524,6 +538,9 @@ materials_reasons_sum <- d_eligible %>%
 ```
 
 ## Table
+
+This is Table 2 of the manuscript.
+
 ```{r}
 materials_table <- bind_rows(
   materials_statement_sum %>%
@@ -580,6 +597,7 @@ kable(materials_table)
 # Data
 
 ## Statement
+
 ```{r}
 data_statement_sum <- d_eligible %>%
   count_prop_ci(data_statement, ci_method = "sisonglaz")
@@ -595,6 +613,7 @@ data_functional_sum <- d_eligible %>%
 ```
 
 ## Access method
+
 ```{r}
 data_access_sum <- d_eligible %>%
   filter(data_statement == "YES the statement says that the data are available", data_access_status == "YES") %>%
@@ -602,12 +621,15 @@ data_access_sum <- d_eligible %>%
 ```
 
 ## Access failures
+
 ```{r}
 data_access_detail_sum <- d_eligible %>%
   filter(data_access_status == "NO") %>%
   count(sample_id, data_access_detail, .drop = F)
 ```
+
 ## Reasons for not sharing
+
 ```{r}
 data_reasons_sum <- d_eligible %>%
   filter(data_statement == "YES the statement says that the data are not available") %>%
@@ -615,6 +637,9 @@ data_reasons_sum <- d_eligible %>%
 ```
 
 ## Table
+
+This is Table 3 of the manuscript.
+
 ```{r}
 data_table <- bind_rows(
   data_statement_sum %>%
@@ -668,9 +693,10 @@ data_table <- bind_rows(
 kable(data_table)
 ```
 
-# Analysis script availability
+# Analysis scripts
 
 ## Statement
+
 ```{r}
 analysis_statement_sum <- d_eligible %>%
   count_prop_ci(analysis_statement, ci_method = "sisonglaz")
@@ -678,7 +704,7 @@ analysis_statement_sum <- d_eligible %>%
 
 ## Functional availability of analysis scripts
 
-Occasionally a statement said that analysis scripts were available but we could not find or immediately access them. So below we derive a prevalence estimate for *functional* availability of analysis scripts i.e., articles that stated analysis scripts were availabile and we could in fact find and access analysis scripts.
+Occasionally a statement said that analysis scripts were available but we could not find or immediately access them. So below we derive a prevalence estimate for *functional* availability of analysis scripts i.e., articles that stated analysis scripts were available and we could in fact find and access analysis scripts.
 
 ```{r}
 analysis_functional_sum <- d_eligible %>%
@@ -686,6 +712,7 @@ analysis_functional_sum <- d_eligible %>%
 ```
 
 ## Access method
+
 ```{r}
 analysis_access_sum <- d_eligible %>%
   filter(analysis_statement == "YES the statement says that the analysis scripts are available", analysis_access_status == "YES") %>%
@@ -693,6 +720,7 @@ analysis_access_sum <- d_eligible %>%
 ```
 
 ## Access failures
+
 ```{r}
 analysis_access_detail_sum <- d_eligible %>%
   filter(analysis_access_status == "NO") %>%
@@ -700,6 +728,7 @@ analysis_access_detail_sum <- d_eligible %>%
 ```
 
 ## Reasons for not sharing
+
 ```{r}
 analysis_reasons_sum <- d_eligible %>%
   filter(analysis_statement == "YES the statement says that the analysis scripts are not available") %>%
@@ -707,6 +736,9 @@ analysis_reasons_sum <- d_eligible %>%
 ```
 
 ## Table
+
+This is Table 4 of the manuscript.
+
 ```{r}
 analysis_table <- bind_rows(
   analysis_statement_sum %>%
@@ -760,9 +792,29 @@ analysis_table <- bind_rows(
 kable(analysis_table)
 ```
 
+
+# Data and analysis sharing
+
+```{r}
+# Create functional availability variables
+contingent_data_analysis <- d_eligible %>% 
+  mutate(
+    prereg_func = ifelse(prereg_statement == "YES the statement says that there is a preregistration" & prereg_access_status == "YES", T, F),
+    materials_func = ifelse(materials_statement == "YES the statement says that the materials are available" & materials_access_status == "YES", T, F),
+    data_func = ifelse(data_statement == "YES the statement says that the data are available" & data_access_status == "YES", T, F),
+    analysis_func = ifelse(analysis_statement == "YES the statement says that the analysis scripts are available" & analysis_access_status == "YES", T, F),
+    data_and_analysis = ifelse(data_func == T & analysis_func == T, T, F)
+         ) %>%
+  count_prop_ci(data_and_analysis, ci_method = "wilson")
+
+```
+
+As noted by a reviewer, sharing either data or analysis scripts can have independent benefits, but sharing both data and analysis scripts will be maximally beneficial because it may enable computational reproducibility (Hardwicke et al., 2018). Both data and analysis scripts were shared in `r contingent_data_analysis %>% filter(sample_id == "Field", data_and_analysis == T) %>% pull(report)` articles in the field-wide sample and `r contingent_data_analysis %>% filter(sample_id == "Prominent", data_and_analysis == T) %>% pull(report)` articles in the prominent journals sample. 
+
 # Funding disclosures
 
 ## Statement
+
 ```{r}
 funding_any_sum <- d_eligible %>%
   mutate(funding_statement = case_when(
@@ -776,6 +828,8 @@ funding_detail_sum <- d_eligible %>%
 ```
 
 ## Table
+
+This is Table 5 of the manuscript.
 
 ```{r}
 funding_table <- bind_rows(
@@ -804,6 +858,7 @@ kable(funding_table)
 # Conflict of interest disclosures
 
 ## Statement
+
 ```{r}
 coi_any_sum <- d_eligible %>%
   mutate(coi_statement = case_when(
@@ -817,6 +872,8 @@ coi_detail_sum <- d_eligible %>%
 ```
 
 ## Table
+
+This is Table 6 of the manuscript.
 
 ```{r}
 coi_table <- bind_rows(
@@ -905,6 +962,7 @@ plot_data <- bind_rows(
   mutate(N = 200,
          sample_label = ifelse(sample_id == "Field", paste0("Field\n2022"), paste0("Prominent\n2022")))
 ```
+
 ```{r}
 d_2015 <- read_csv(here('data','primary','d_Hardwicke2022.csv')) %>%
   mutate(
@@ -945,7 +1003,6 @@ plot_core <- plot_data %>%
     theme_custom() +
     theme(panel.background = element_rect(fill = "ivory"))
 ```
-
 
 ```{r other_practices_plot, fig.path = "figs/", fig.width = unit(10,"cm"), fig.height = unit(6,"cm")}
 plot_other <- plot_data %>%
@@ -1062,7 +1119,7 @@ Over a decade of advocacy and policy reforms have attempted to increase the upta
 
 # Confidence interval comparison
 
-A comparison of confidence intervals calucalted using the Wilson method and the Sison-Glaz method for reporting in Supplementary Table A2.
+A comparison of confidence intervals calculated using the Wilson method and the Sison-Glaz method.
 
 ```{r}
 
@@ -1070,7 +1127,7 @@ A comparison of confidence intervals calucalted using the Wilson method and the 
 ci_prereg <- bind_rows(
   prereg_sison <- d_eligible %>%
     count_prop_ci(prereg_statement, ci_method = "sisonglaz") %>%
-    mutate(method = "Sison-Glaz"),
+    mutate(method = "SisonGlaz"),
   
   prereg_wilson <- d_eligible %>%
     count_prop_ci(prereg_statement, ci_method = "wilson") %>%
@@ -1078,13 +1135,14 @@ ci_prereg <- bind_rows(
 ) %>%
   select(sample = sample_id, statement = prereg_statement, method, percent, ci_lwr, ci_upr) %>%
   mutate(percent = signif(percent,2), ci_lwr = signif(ci_lwr,2), ci_upr = signif(ci_upr,2)) %>%
-  arrange(sample, statement, method)
+  arrange(sample, statement, method) %>%
+  mutate(indicator = "prereg")
  
 # materials 
 ci_materials <- bind_rows(
   materials_sison <- d_eligible %>%
     count_prop_ci(materials_statement, ci_method = "sisonglaz") %>%
-    mutate(method = "Sison-Glaz"),
+    mutate(method = "SisonGlaz"),
   
   materials_wilson <- d_eligible %>%
     count_prop_ci(materials_statement, ci_method = "wilson") %>%
@@ -1092,13 +1150,14 @@ ci_materials <- bind_rows(
 ) %>%
   select(sample = sample_id, statement = materials_statement, method, percent, ci_lwr, ci_upr) %>%
   mutate(percent = signif(percent,2), ci_lwr = signif(ci_lwr,2), ci_upr = signif(ci_upr,2)) %>%
-  arrange(sample, statement, method)
+  arrange(sample, statement, method) %>%
+  mutate(indicator = "materials")
 
 # data
 ci_data <- bind_rows(
   data_sison <- d_eligible %>%
     count_prop_ci(data_statement, ci_method = "sisonglaz") %>%
-    mutate(method = "Sison-Glaz"),
+    mutate(method = "SisonGlaz"),
   
   data_wilson <- d_eligible %>%
     count_prop_ci(data_statement, ci_method = "wilson") %>%
@@ -1106,13 +1165,14 @@ ci_data <- bind_rows(
 ) %>%
   select(sample = sample_id, statement = data_statement, method, percent, ci_lwr, ci_upr) %>%
   mutate(percent = signif(percent,2), ci_lwr = signif(ci_lwr,2), ci_upr = signif(ci_upr,2)) %>%
-  arrange(sample, statement, method)
+  arrange(sample, statement, method) %>%
+  mutate(indicator = "data")
 
 # analysis
 ci_analysis <- bind_rows(
   analysis_sison <- d_eligible %>%
     count_prop_ci(analysis_statement, ci_method = "sisonglaz") %>%
-    mutate(method = "Sison-Glaz"),
+    mutate(method = "SisonGlaz"),
   
   analysis_wilson <- d_eligible %>%
     count_prop_ci(analysis_statement, ci_method = "wilson") %>%
@@ -1120,13 +1180,14 @@ ci_analysis <- bind_rows(
 ) %>%
   select(sample = sample_id, statement = analysis_statement, method, percent, ci_lwr, ci_upr) %>%
   mutate(percent = signif(percent,2), ci_lwr = signif(ci_lwr,2), ci_upr = signif(ci_upr,2)) %>%
-  arrange(sample, statement, method)
+  arrange(sample, statement, method) %>%
+  mutate(indicator = "analysis")
 
 # funding
 ci_funding <- bind_rows(
   funding_sison <- d_eligible %>%
     count_prop_ci(funding_statement, ci_method = "sisonglaz") %>%
-    mutate(method = "Sison-Glaz"),
+    mutate(method = "SisonGlaz"),
   
   funding_wilson <- d_eligible %>%
     count_prop_ci(funding_statement, ci_method = "wilson") %>%
@@ -1134,13 +1195,14 @@ ci_funding <- bind_rows(
 ) %>%
   select(sample = sample_id, statement = funding_statement, method, percent, ci_lwr, ci_upr) %>%
   mutate(percent = signif(percent,2), ci_lwr = signif(ci_lwr,2), ci_upr = signif(ci_upr,2)) %>%
-  arrange(sample, statement, method)
+  arrange(sample, statement, method) %>%
+  mutate(indicator = "funding")
 
 # conflicts of interest
 ci_coi <- bind_rows(
   coi_sison <- d_eligible %>%
     count_prop_ci(coi_statement, ci_method = "sisonglaz") %>%
-    mutate(method = "Sison-Glaz"),
+    mutate(method = "SisonGlaz"),
   
   coi_wilson <- d_eligible %>%
     count_prop_ci(coi_statement, ci_method = "wilson") %>%
@@ -1148,11 +1210,16 @@ ci_coi <- bind_rows(
 ) %>%
   select(sample = sample_id, statement = coi_statement, method, percent, ci_lwr, ci_upr) %>%
   mutate(percent = signif(percent,2), ci_lwr = signif(ci_lwr,2), ci_upr = signif(ci_upr,2)) %>%
-  arrange(sample, statement, method)
+  arrange(sample, statement, method) %>%
+  mutate(indicator = "coi")
 
-bind_rows(ci_prereg, ci_materials, ci_data, ci_analysis, ci_funding, ci_coi) %>%
-  kable()
+
+# compute the differences between the CIs calculated with the different methods.
+compare_ci <- bind_rows(ci_prereg, ci_materials, ci_data, ci_analysis, ci_funding, ci_coi) %>%
+  pivot_wider(id_cols = c("indicator", "sample", "statement"),  names_from = "method", values_from = c("percent", "ci_lwr", "ci_upr")) %>%
+  mutate(ci_lwr_diff = ci_lwr_SisonGlaz - ci_lwr_Wilson, ci_upr_diff = ci_upr_SisonGlaz - ci_upr_Wilson)
 ```
+The two methods produce highly similar confidence intervals — the largest difference was `r max(c(abs(compare_ci$ci_lwr_diff)),max(abs(compare_ci$ci_upr_diff)))`.
 
 # Session Info
 
@@ -1161,4 +1228,3 @@ Information about the software environment used to run the analyses reported in 
 ```{r}
 sessionInfo()
 ```
-
